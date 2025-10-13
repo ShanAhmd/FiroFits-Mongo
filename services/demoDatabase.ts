@@ -44,8 +44,8 @@ let users: User[] = [
 ];
 
 let products: Product[] = [
-    { id: 'prod-1', name: 'Elegant Saree Blouse', description: 'A beautifully crafted silk saree blouse with intricate embroidery. Perfect for weddings and special occasions.', price: 4500, imageUrl: 'https://images.unsplash.com/photo-1617019819122-a524314c8f5f?q=80&w=800' },
-    { id: 'prod-2', name: 'Casual Linen Dress', description: 'A comfortable and stylish linen dress, ideal for day wear. Breathable fabric and a relaxed fit.', price: 6200, imageUrl: 'https://images.unsplash.com/photo-1594633312681-425c7b97ccd1?q=80&w=800' },
+    { id: 'prod-1', name: 'Elegant Saree Blouse', description: 'A beautifully crafted silk saree blouse with intricate embroidery. Perfect for weddings and special occasions.', price: 4500, imageUrl: 'https://www.daraz.lk/products/ladies-modern-layered-abaya-with-shawl-i163023865.html' },
+    { id: 'prod-2', name: 'Casual Linen Dress', description: 'A comfortable and stylish linen dress, ideal for day wear. Breathable fabric and a relaxed fit.', price: 6200, imageUrl: 'https://www.hiradesign.com/product/etno-hira-girl-dress/' },
     { id: 'prod-3', name: 'Modern Abaya', description: 'A chic and modest Abaya made from high-quality crepe. Features subtle pearl detailing on the sleeves.', price: 8500, imageUrl: 'https://images.unsplash.com/photo-1583846243221-7d949c218270?q=80&w=800' },
     { id: 'prod-4', name: 'Classic School Uniform', description: 'Durable and well-stitched school uniform, made to withstand daily wear and tear. Available for all major schools.', price: 3500, imageUrl: 'https://images.unsplash.com/photo-1576426863848-c21f68c6aa98?q=80&w=800' },
 ];

@@ -1,6 +1,5 @@
 import React from 'react';
 import { type OrderData, GarmentType } from '../types';
-import { UniformIcon, AbayaIcon, BlouseIcon, DressIcon, FrockIcon, OtherIcon } from './IconComponents';
 
 interface ServiceSelectionProps {
   orderData: OrderData;
@@ -8,33 +7,42 @@ interface ServiceSelectionProps {
 }
 
 const services = [
-  { type: GarmentType.SAREE_BLOUSE, icon: <BlouseIcon className="w-10 h-10" /> },
-  { type: GarmentType.LADIES_DRESS, icon: <DressIcon className="w-10 h-10" /> },
-  { type: GarmentType.FROCK, icon: <FrockIcon className="w-10 h-10" /> },
-  { type: GarmentType.ABAYA, icon: <AbayaIcon className="w-10 h-10" /> },
-  { type: GarmentType.SCHOOL_UNIFORM, icon: <UniformIcon className="w-10 h-10" /> },
-  { type: GarmentType.OTHER, icon: <OtherIcon className="w-10 h-10" /> },
+  { id: GarmentType.SAREE_BLOUSE, name: 'Saree Blouse', desc: 'Custom tailored saree blouses with perfect fit.' },
+  { id: GarmentType.ABAYA, name: 'Abaya', desc: 'Elegant, modest, and flowing abaya designs.' },
+  { id: GarmentType.LADIES_DRESS, name: 'Ladies Dress', desc: 'Classic and modern ladies dresses.' },
+  { id: GarmentType.SCHOOL_UNIFORM, name: 'Uniforms', desc: 'Professional and comfortable workwear.' },
+  { id: GarmentType.OTHER, name: 'Other Design', desc: 'Have something else in mind? Let us know.' }
 ];
 
 const ServiceSelection: React.FC<ServiceSelectionProps> = ({ orderData, updateOrderData }) => {
   return (
-    <div className="animate-fade-in">
-      <h2 className="text-2xl font-bold text-brand-charcoal mb-2">Choose Your Service</h2>
-      <p className="text-brand-dark-gray mb-8">What can we create for you today?</p>
-      <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
-        {services.map(service => (
-          <button
-            key={service.type}
-            onClick={() => updateOrderData({ service: service.type })}
-            className={`flex flex-col items-center justify-center p-6 border-2 rounded-xl text-center transition-all duration-300 transform
-              ${orderData.service === service.type 
-                ? 'border-brand-teal bg-teal-50 shadow-lg scale-105' 
-                : 'border-brand-light-gray bg-white hover:border-brand-teal hover:-translate-y-1 hover:shadow-md'}
-            `}
+    <div className="animate-fade-in space-y-12">
+      <div className="border-b border-black pb-6">
+        <span className="text-[10px] uppercase tracking-[0.4em] text-brand-dark-gray font-bold block mb-2">Step 01</span>
+        <h2 className="text-4xl font-serif text-black uppercase tracking-tighter">Choose Your Style</h2>
+        <p className="text-xs text-brand-dark-gray font-light mt-2 tracking-wide">
+          Select the type of clothing you would like us to tailor for you.
+        </p>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {services.map((service) => (
+          <div
+            key={service.id}
+            onClick={() => updateOrderData({ service: service.id as GarmentType })}
+            className={`cursor-pointer border transition-all duration-300 p-8 flex flex-col space-y-4
+              ${orderData.service === service.id 
+                ? 'bg-black border-black text-white' 
+                : 'bg-white border-black/20 text-black hover:border-black hover:bg-gray-50'
+              }`}
           >
-            <div className="text-brand-teal mb-3">{service.icon}</div>
-            <span className="font-semibold text-brand-charcoal">{service.type}</span>
-          </button>
+            <h3 className="text-xl font-serif uppercase tracking-wider font-bold">
+              {service.name}
+            </h3>
+            <p className={`text-[10px] font-light uppercase tracking-widest ${orderData.service === service.id ? 'text-gray-300' : 'text-brand-dark-gray'}`}>
+              {service.desc}
+            </p>
+          </div>
         ))}
       </div>
     </div>

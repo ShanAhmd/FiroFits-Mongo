@@ -1,83 +1,96 @@
-import React from 'react';
-import { type OrderData, Unit, type Measurements } from '../types';
+import React, { useState } from 'react';
+import { type OrderData, type Measurements, Unit } from '../types';
 
 interface MeasurementsFormProps {
   orderData: OrderData;
   updateOrderData: (data: Partial<OrderData>) => void;
-  updateMeasurements: (measurements: Partial<Measurements>) => void;
+  updateMeasurements: (data: Partial<Measurements>) => void;
 }
 
-const measurementFields: { key: keyof Measurements, label: string }[] = [
-  { key: 'shoulder', label: 'Shoulder' },
-  { key: 'chest', label: 'Chest (Round)' },
-  { key: 'waist', label: 'Waist (Round)' },
-  { key: 'hip', label: 'Hip (Round)' },
-  { key: 'fullLength', label: 'Full Length' },
-  { key: 'vestLength', label: 'Vest Length' },
-  { key: 'sleeveLength', label: 'Sleeve Length' },
-  { key: 'armhole', label: 'Armhole' },
-  { key: 'collarSize', label: 'Collar Size' },
-];
-
 const MeasurementsForm: React.FC<MeasurementsFormProps> = ({ orderData, updateOrderData, updateMeasurements }) => {
-  const handleUnitChange = (unit: Unit) => {
-    updateOrderData({ unit });
-  };
-  
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-      const { name, value } = e.target;
-      if (/^\d*\.?\d*$/.test(value)) {
-        updateMeasurements({ [name as keyof Measurements]: value });
-      }
-  };
+  const [activeInfoBox, setActiveInfoBox] = useState<string | null>(null);
+
+  const measurementFields = [
+    { id: 'shoulder', label: 'Shoulder Width', placeholder: 'Measurement', desc: 'Tip of one shoulder to the other.' },
+    { id: 'chest', label: 'Chest', placeholder: 'Measurement', desc: 'Fullest part of your chest or bust.' },
+    { id: 'waist', label: 'Waist', placeholder: 'Measurement', desc: 'Narrowest part of your waist.' },
+    { id: 'hip', label: 'Hips', placeholder: 'Measurement', desc: 'Fullest part of your hips.' },
+    { id: 'fullLength', label: 'Full Length', placeholder: 'Measurement', desc: 'Nape of your neck down to the desired hem.' },
+    { id: 'vestLength', label: 'Torso Length', placeholder: 'Measurement', desc: 'Nape of your neck down to your natural waist.' },
+    { id: 'sleeveLength', label: 'Sleeve Length', placeholder: 'Measurement', desc: 'Tip of your shoulder down to your wrist.' },
+    { id: 'armhole', label: 'Armhole', placeholder: 'Measurement', desc: 'Around your shoulder joint.' },
+    { id: 'collarSize', label: 'Neck Size', placeholder: 'Measurement', desc: 'Around the base of your neck.' }
+  ];
 
   return (
-    <div className="animate-fade-in">
-      <div className="flex flex-col sm:flex-row justify-between sm:items-center mb-8">
+    <div className="animate-fade-in space-y-12">
+      <div className="border-b border-black pb-6 flex justify-between items-end">
         <div>
-          <h2 className="text-2xl font-bold text-brand-charcoal">Enter Your Measurements</h2>
-          <p className="text-brand-dark-gray">Provide your precise measurements for a perfect fit.</p>
+          <span className="text-[10px] uppercase tracking-[0.4em] text-brand-dark-gray font-bold block mb-2">Step 03</span>
+          <h2 className="text-4xl font-serif text-black uppercase tracking-tighter">Your Measurements</h2>
+          <p className="text-xs text-brand-dark-gray font-light mt-2 tracking-wide max-w-sm">
+            Please provide your exact measurements to ensure a perfect fit.
+          </p>
         </div>
-        <div className="flex items-center p-1 bg-brand-light-gray rounded-xl mt-4 sm:mt-0">
+        
+        {/* Metric / Imperial Unit Toggle */}
+        <div className="flex border border-black p-1 bg-gray-50 shrink-0">
           <button
-            onClick={() => handleUnitChange(Unit.INCHES)}
-            className={`px-4 py-2 text-sm font-semibold rounded-lg transition-colors w-1/2 sm:w-auto ${orderData.unit === Unit.INCHES ? 'bg-white text-brand-teal shadow' : 'text-brand-dark-gray'}`}
+            type="button"
+            className={`px-6 py-2 text-[10px] font-bold uppercase tracking-[0.2em] transition-all ${orderData.unit === Unit.INCHES ? 'bg-black text-white' : 'text-gray-500 hover:text-black'}`}
+            onClick={() => updateOrderData({ unit: Unit.INCHES })}
           >
-            Inches (in)
+            Inches
           </button>
           <button
-            onClick={() => handleUnitChange(Unit.CENTIMETERS)}
-            className={`px-4 py-2 text-sm font-semibold rounded-lg transition-colors w-1/2 sm:w-auto ${orderData.unit === Unit.CENTIMETERS ? 'bg-white text-brand-teal shadow' : 'text-brand-dark-gray'}`}
+            type="button"
+            className={`px-6 py-2 text-[10px] font-bold uppercase tracking-[0.2em] transition-all ${orderData.unit === Unit.CENTIMETERS ? 'bg-black text-white' : 'text-gray-500 hover:text-black'}`}
+            onClick={() => updateOrderData({ unit: Unit.CENTIMETERS })}
           >
             CM
           </button>
         </div>
       </div>
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-x-6 gap-y-6">
-        {measurementFields.map(field => (
-          <div key={field.key as string}>
-            <label htmlFor={field.key as string} className="block text-base font-semibold text-brand-charcoal">
-              {field.label}
-            </label>
-            <div className="mt-2 relative rounded-xl shadow-sm">
-                <input
-                    type="text"
-                    name={field.key as string}
-                    id={field.key as string}
-                    value={orderData.measurements[field.key]}
-                    onChange={handleInputChange}
-                    className="focus:ring-brand-teal focus:border-brand-teal block w-full pr-16 text-lg border-brand-light-gray rounded-xl px-4 py-3"
-                    placeholder="0.0"
-                    inputMode="decimal"
-                />
-                <div className="absolute inset-y-0 right-0 pr-4 flex items-center pointer-events-none">
-                    <span className="text-brand-dark-gray text-base">{orderData.unit}</span>
-                </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-10">
+        {measurementFields.map((field) => (
+          <div key={field.id} className="relative group">
+            <div className="flex justify-between items-center mb-4">
+              <label htmlFor={field.id} className="text-[9px] uppercase tracking-[0.3em] font-bold text-black flex items-center gap-2">
+                {field.label}
+              </label>
+              <button
+                type="button"
+                className="text-[10px] text-gray-400 hover:text-black font-bold uppercase tracking-widest transition-colors"
+                onMouseEnter={() => setActiveInfoBox(field.id)}
+                onMouseLeave={() => setActiveInfoBox(null)}
+              >
+                [ ? ]
+              </button>
+            </div>
+            
+            <div className="relative">
+              <input
+                type="text"
+                id={field.id}
+                className="w-full bg-transparent border-0 border-b border-black/20 focus:border-black focus:ring-0 px-0 py-3 text-sm font-bold uppercase tracking-widest text-black rounded-none transition-colors placeholder-gray-300 font-sans"
+                placeholder={field.placeholder}
+                value={(orderData.measurements as any)[field.id] || ''}
+                onChange={(e) => updateMeasurements({ [field.id]: e.target.value })}
+              />
+              <span className="absolute right-0 bottom-3 text-[10px] font-bold uppercase tracking-widest text-gray-400">
+                {orderData.unit === Unit.INCHES ? 'IN' : 'CM'}
+              </span>
+            </div>
+
+            {/* Hover tooltip */}
+            <div className={`absolute z-10 bottom-full left-0 mb-2 w-full bg-black text-white p-3 border border-white/10 transition-all duration-300 pointer-events-none shadow-2xl ${activeInfoBox === field.id ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'}`}>
+              <span className="block text-[8px] uppercase tracking-[0.3em] font-bold text-gray-400 mb-1">How to Measure</span>
+              <p className="text-xs font-light tracking-wide">{field.desc}</p>
             </div>
           </div>
         ))}
       </div>
-      <p className="text-sm text-brand-dark-gray mt-6">Not sure how to measure? Check out our <a href="#" className="text-brand-teal underline font-semibold">Size Guide</a>.</p>
     </div>
   );
 };

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { type User, type View, UserRole } from '../types';
 import { FiroFitsLogo, UserCircleIcon } from './IconComponents';
 
@@ -6,69 +6,116 @@ interface HeaderProps {
   user: User | null;
   navigateTo: (view: View) => void;
   onLogout: () => void;
+  cartItemsCount: number;
 }
 
-const NavLink: React.FC<{ onClick: () => void; children: React.ReactNode }> = ({ onClick, children }) => (
-  <button onClick={onClick} className="text-sm font-semibold text-brand-dark-gray hover:text-brand-teal transition-colors">
+const NavLink: React.FC<{ onClick: () => void; children: React.ReactNode; active?: boolean }> = ({
+  onClick,
+  children,
+  active,
+}) => (
+  <button
+    onClick={onClick}
+    className="relative text-[10px] sm:text-xs uppercase tracking-[0.2em] font-semibold text-brand-dark-gray hover:text-black transition-colors group"
+  >
     {children}
+    <span className="absolute -bottom-1.5 left-0 w-0 h-[1px] bg-black transition-all duration-300 group-hover:w-full"></span>
   </button>
 );
 
-const Header: React.FC<HeaderProps> = ({ user, navigateTo, onLogout }) => {
+const Header: React.FC<HeaderProps> = ({ user, navigateTo, onLogout, cartItemsCount }) => {
+  const [scrolled, setScrolled] = useState(false);
+
+  useEffect(() => {
+    const handleScroll = () => setScrolled(window.scrollY > 20);
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
   return (
-    <header className="bg-white/80 backdrop-blur-md sticky top-0 z-50 shadow-sm">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-20">
-          <div className="flex items-center">
-            <button onClick={() => navigateTo(user ? 'order' : 'login')} className="flex-shrink-0 text-brand-charcoal">
-              <FiroFitsLogo className="h-10 w-auto" />
-            </button>
-          </div>
-          {user && (
-            <nav className="hidden md:flex items-center space-x-8">
-              {user.role === UserRole.CUSTOMER && <NavLink onClick={() => navigateTo('order')}>New Order</NavLink>}
-              <NavLink onClick={() => navigateTo('products')}>Products</NavLink>
-              <NavLink onClick={() => navigateTo('about')}>About Us</NavLink>
-            </nav>
+    <header className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 w-full border-b ${scrolled ? 'bg-white/80 backdrop-blur-[24px] border-black/10 py-3 shadow-[0_4px_30px_rgba(0,0,0,0.02)]' : 'bg-white/40 backdrop-blur-[12px] border-black/5 py-5'}`}>
+      <div className="flex items-center justify-between w-full px-6 md:px-12 h-12">
+        
+        {/* LOGO */}
+        <div className="flex-shrink-0">
+          <button
+            onClick={() => navigateTo('home')}
+            className="flex items-center gap-2 text-black group text-left"
+          >
+            <div>
+              <span className="block font-serif text-xl md:text-2xl tracking-[0.15em] font-medium leading-none">FIROFITS</span>
+              <span className="block text-[6px] md:text-[7px] uppercase tracking-[0.3em] text-brand-dark-gray font-bold mt-1">
+                Custom Tailoring
+              </span>
+            </div>
+          </button>
+        </div>
+
+        {/* MAIN NAVIGATION (Hidden on mobile) */}
+        <nav className="hidden md:flex items-center justify-center space-x-10 flex-grow">
+          <NavLink onClick={() => navigateTo('home')}>Home</NavLink>
+          <NavLink onClick={() => navigateTo('products')}>Shop</NavLink>
+          <NavLink onClick={() => navigateTo('about')}>About Us</NavLink>
+          {user && user.role === UserRole.CUSTOMER && (
+            <NavLink onClick={() => navigateTo('order')}>Bespoke Tailoring</NavLink>
           )}
-          <div className="flex items-center space-x-4">
-            {user ? (
-              <>
-                <button
-                  onClick={() => navigateTo(user.role === UserRole.ADMIN ? 'admin-dashboard' : 'dashboard')}
-                  className="flex items-center text-sm font-semibold text-brand-charcoal hover:text-brand-teal transition-colors"
-                >
-                  {user.profilePhotoUrl ? (
-                    <img src={user.profilePhotoUrl} alt="profile" className="h-8 w-8 rounded-full mr-2" />
-                  ) : (
-                    <UserCircleIcon className="h-7 w-7 mr-2 text-brand-dark-gray" />
-                  )}
-                  My Dashboard
-                </button>
-                <button
-                  onClick={onLogout}
-                  className="px-4 py-2 bg-brand-charcoal text-white rounded-lg font-semibold text-sm hover:opacity-90 transition-colors"
-                >
-                  Logout
-                </button>
-              </>
-            ) : (
-              <>
-                <button
-                  onClick={() => navigateTo('login')}
-                  className="px-4 py-2 bg-brand-teal text-white rounded-lg font-semibold text-sm hover:opacity-90 transition-colors"
-                >
-                  Login
-                </button>
-                 <button
-                  onClick={() => navigateTo('signup')}
-                  className="px-4 py-2 bg-transparent text-brand-charcoal rounded-lg font-semibold text-sm hover:bg-gray-100 transition-colors"
-                >
-                  Sign Up
-                </button>
-              </>
+          {user && user.role === UserRole.ADMIN && (
+            <NavLink onClick={() => navigateTo('admin-dashboard')}>Admin</NavLink>
+          )}
+        </nav>
+
+        {/* RIGHT UTILITIES & AUTH */}
+        <div className="flex items-center space-x-6 flex-shrink-0">
+          {/* SHOPPING CART BUTTON */}
+          <button
+            onClick={() => navigateTo('cart')}
+            className="relative p-2 text-black hover:opacity-75 transition-opacity flex items-center justify-center"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 10.5V6a3.75 3.75 0 1 0-7.5 0v4.5m11.356-1.993 1.263 12c.07.665-.45 1.243-1.119 1.243H4.25a1.125 1.125 0 0 1-1.12-1.243l1.264-12A1.125 1.125 0 0 1 5.513 7.5h12.974c.576 0 1.059.435 1.119 1.007ZM8.625 10.5a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm7.5 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z" />
+            </svg>
+            {cartItemsCount > 0 && (
+              <span className="absolute top-0 right-0 bg-black text-white text-[8px] font-bold h-4 w-4 flex items-center justify-center shadow-sm">
+                {cartItemsCount}
+              </span>
             )}
-          </div>
+          </button>
+
+          {/* AUTH / PROFILE */}
+          {user ? (
+            <div className="flex items-center space-x-4">
+              <button
+                onClick={() => navigateTo(user.role === UserRole.ADMIN ? 'admin-dashboard' : 'dashboard')}
+                className="flex items-center text-[9px] uppercase tracking-[0.2em] font-bold text-black border border-black px-4 py-2 hover:bg-black hover:text-white transition-colors"
+              >
+                {user.profilePhotoUrl ? (
+                  <img
+                    src={user.profilePhotoUrl}
+                    alt="profile"
+                    className="h-4 w-4 object-cover mr-2"
+                  />
+                ) : (
+                  <UserCircleIcon className="h-4 w-4 mr-1.5 text-black" />
+                )}
+                <span>Dashboard</span>
+              </button>
+              <button
+                onClick={onLogout}
+                className="px-5 py-2 bg-transparent border border-black text-black text-[9px] font-bold uppercase tracking-[0.2em] hover:bg-black hover:text-white transition-all"
+              >
+                Logout
+              </button>
+            </div>
+          ) : (
+            <div className="flex items-center space-x-2">
+              <button
+                onClick={() => navigateTo('login')}
+                className="px-5 py-2 bg-black text-white border border-black text-[9px] font-bold uppercase tracking-[0.2em] hover:bg-white hover:text-black transition-all"
+              >
+                Login
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </header>

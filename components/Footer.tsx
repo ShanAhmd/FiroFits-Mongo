@@ -8,51 +8,90 @@ interface FooterProps {
 }
 
 const FooterLink: React.FC<{ onClick: () => void; children: React.ReactNode }> = ({ onClick, children }) => (
-  <button onClick={onClick} className="text-sm text-gray-400 hover:text-white transition-colors">
+  <button onClick={onClick} className="text-[10px] uppercase tracking-[0.25em] font-bold text-gray-500 hover:text-white transition-colors relative group">
     {children}
+    <span className="absolute -bottom-1 left-0 w-0 h-[1px] bg-white transition-all duration-300 group-hover:w-full"></span>
   </button>
 );
 
 const Footer: React.FC<FooterProps> = ({ user, navigateTo }) => {
   return (
-    <footer className="bg-brand-charcoal text-white">
-      <div className="max-w-7xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-          {/* Brand Section */}
-          <div className="space-y-4 md:col-span-2">
-            <FiroFitsLogo className="h-12 text-white" />
-            <p className="text-sm text-gray-400 max-w-md">
-              Your Vision, Our Craft. Custom tailoring delivered to your door. From school uniforms to elegant abayas, we bring your ideas to life.
+    <footer className="bg-black text-white pt-24 pb-12 border-t border-black">
+      <div className="max-w-[1400px] mx-auto px-6 lg:px-8">
+        
+        {/* HUGE 2026 BRUTALIST BRANDING */}
+        <div className="border-b border-white/20 pb-16 mb-16 flex flex-col md:flex-row justify-between items-end gap-8">
+          <div>
+            <h2 className="text-6xl md:text-[8rem] font-serif leading-none tracking-tighter uppercase">
+              FiroFits.
+            </h2>
+            <p className="text-sm font-sans font-light tracking-wide text-gray-400 max-w-sm mt-6">
+              Precision engineering meets absolute minimalism. Experience ready-to-wear silhouettes and bespoke architectural garments.
             </p>
           </div>
+          <div className="flex gap-4">
+            <a href="https://wa.me/94771234567" target="_blank" rel="noopener noreferrer" className="p-4 border border-white/20 rounded-full hover:bg-white hover:text-black transition-all">
+              <WhatsAppIcon className="h-6 w-6" />
+            </a>
+            <a href="#" className="p-4 border border-white/20 rounded-full hover:bg-white hover:text-black transition-all">
+              <InstagramIcon className="h-6 w-6" />
+            </a>
+          </div>
+        </div>
 
-          {/* Quick Links */}
-          <div>
-            <h3 className="text-sm font-semibold uppercase tracking-wider">Quick Links</h3>
-            <ul className="mt-4 space-y-2">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-16">
+          {/* Main Navigation */}
+          <div className="space-y-6">
+            <h3 className="text-[9px] uppercase tracking-[0.3em] font-bold text-white/50 mb-8">Quick Links</h3>
+            <ul className="space-y-4">
+              <li><FooterLink onClick={() => navigateTo('home')}>Home</FooterLink></li>
+              <li><FooterLink onClick={() => navigateTo('products')}>Boutique Shop</FooterLink></li>
               <li><FooterLink onClick={() => navigateTo('about')}>About Us</FooterLink></li>
-              <li><FooterLink onClick={() => navigateTo('products')}>Products</FooterLink></li>
               {user && (
-                 <li><FooterLink onClick={() => navigateTo('dashboard')}>My Orders</FooterLink></li>
+                <li><FooterLink onClick={() => navigateTo('dashboard')}>Dashboard</FooterLink></li>
               )}
-              {(!user || user.role === UserRole.CUSTOMER) && (
-                <li><FooterLink onClick={() => navigateTo('order')}>New Order</FooterLink></li>
+              {user && user.role === UserRole.CUSTOMER && (
+                <li><FooterLink onClick={() => navigateTo('order')}>Custom Tailoring</FooterLink></li>
               )}
             </ul>
           </div>
 
-          {/* Contact/Socials */}
-          <div>
-            <h3 className="text-sm font-semibold uppercase tracking-wider">Connect</h3>
-             <div className="mt-4 flex space-x-4">
-                <a href="#" aria-label="WhatsApp" className="text-gray-400 hover:text-white"><WhatsAppIcon className="h-6 w-6" /></a>
-                <a href="#" aria-label="Instagram" className="text-gray-400 hover:text-white"><InstagramIcon className="h-6 w-6" /></a>
-                <a href="#" aria-label="Facebook" className="text-gray-400 hover:text-white"><FacebookIcon className="h-6 w-6" /></a>
-              </div>
+          {/* Legal / Policies */}
+          <div className="space-y-6">
+            <h3 className="text-[9px] uppercase tracking-[0.3em] font-bold text-white/50 mb-8">Our Policies</h3>
+            <ul className="space-y-4">
+              <li><FooterLink onClick={() => {}}>Privacy Policy</FooterLink></li>
+              <li><FooterLink onClick={() => {}}>Terms of Service</FooterLink></li>
+              <li><FooterLink onClick={() => {}}>Return Policy</FooterLink></li>
+            </ul>
+          </div>
+
+          {/* Connect */}
+          <div className="space-y-6">
+            <h3 className="text-[9px] uppercase tracking-[0.3em] font-bold text-white/50 mb-8">Contact Us</h3>
+            <p className="text-xs text-gray-400 font-light leading-relaxed">
+              Contact our master tailors for custom dress orders, uniform queries, or wedding designs.
+            </p>
+            <p className="text-xs text-white font-bold tracking-widest mt-4">
+              STUDIO@FIROFITS.COM
+            </p>
           </div>
         </div>
-        <div className="mt-8 border-t border-gray-700 pt-8 text-center text-sm text-gray-400">
-          <p>&copy; {new Date().getFullYear()} FiroFits.lk. All rights reserved.</p>
+
+        <div className="mt-24 flex flex-col md:flex-row items-center justify-between text-[9px] text-gray-600 font-bold uppercase tracking-[0.3em]">
+          <div className="flex flex-col md:flex-row items-center gap-6">
+            <p>&copy; {new Date().getFullYear()} FIROFITS ATELIER. ALL RIGHTS RESERVED.</p>
+            <button
+              onClick={() => navigateTo('admin-login')}
+              className="text-gray-700 hover:text-white transition-colors"
+            >
+              [ Admin Login ]
+            </button>
+          </div>
+          <div className="mt-4 md:mt-0 flex items-center gap-2">
+            <FiroFitsLogo className="h-4 w-4" />
+            <span>EST. COLOMBO</span>
+          </div>
         </div>
       </div>
     </footer>

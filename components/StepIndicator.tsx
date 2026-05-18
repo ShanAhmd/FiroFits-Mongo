@@ -6,7 +6,7 @@ interface StepIndicatorProps {
 }
 
 const StepIndicator: React.FC<StepIndicatorProps> = ({ currentStep, totalSteps }) => {
-  const steps = ["Service", "Design", "Measurements", "Extras", "Delivery", "Submit"];
+  const steps = ["Protocol", "References", "Dimensions", "Config", "Logistics", "Authorize"];
 
   return (
     <div className="w-full">
@@ -18,23 +18,23 @@ const StepIndicator: React.FC<StepIndicatorProps> = ({ currentStep, totalSteps }
 
           return (
             <React.Fragment key={stepNumber}>
-              <div className="flex flex-col items-center text-center">
+              <div className="flex flex-col items-center flex-1">
                 <div
-                  className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-lg transition-all duration-300 border-2
-                    ${isCompleted ? 'bg-brand-teal border-brand-teal text-white' : ''}
-                    ${isActive ? 'bg-white border-brand-teal scale-110' : ''}
-                    ${!isCompleted && !isActive ? 'bg-brand-light-gray border-brand-light-gray' : ''}
+                  className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm transition-all duration-300 border-2
+                    ${isCompleted ? 'bg-black border-black text-white' : ''}
+                    ${isActive ? 'bg-white border-black text-black scale-110 shadow-lg' : ''}
+                    ${!isCompleted && !isActive ? 'bg-transparent border-gray-300 text-gray-400' : ''}
                   `}
                 >
-                  {isCompleted ? '✔' : <span className={`${isActive ? 'text-brand-teal' : 'text-brand-dark-gray'}`}>{stepNumber}</span>}
+                  {isCompleted ? '✓' : stepNumber}
                 </div>
-                <p className={`mt-2 text-xs font-semibold uppercase tracking-wider ${isActive ? 'text-brand-teal' : 'text-brand-dark-gray'}`}>
+                <p className={`mt-3 text-[9px] uppercase tracking-[0.25em] font-bold text-center ${isActive || isCompleted ? 'text-black' : 'text-gray-400'}`}>
                   {label}
                 </p>
               </div>
               {stepNumber < totalSteps && (
-                <div className={`flex-1 h-1 mx-2 rounded-full transition-colors duration-500
-                  ${isCompleted || isActive ? 'bg-brand-teal' : 'bg-brand-light-gray'}
+                <div className={`flex-[2] h-[1px] transition-colors duration-500
+                  ${isCompleted ? 'bg-black' : 'bg-gray-200'}
                 `}></div>
               )}
             </React.Fragment>

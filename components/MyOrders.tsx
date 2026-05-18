@@ -1,81 +1,160 @@
 import React, { useState, useEffect } from 'react';
-import { OrderStatus, type Order } from '../types';
-import { getAllOrders } from '../services/demoDatabase';
+import { type Order, type View, OrderStatus, GarmentType } from '../types';
+import { getCustomerOrders } from '../services/supabaseClient';
 import OrderDetailsModal from './OrderDetailsModal';
 
-const getStatusStyles = (status: OrderStatus): { bg: string, text: string, bgBar: string } => {
-  switch (status) {
-    case OrderStatus.DELIVERED:
-      return { bg: 'bg-green-100', text: 'text-green-800', bgBar: 'bg-green-400' };
-    case OrderStatus.STITCHING:
-    case OrderStatus.FABRIC_SOURCING:
-    case OrderStatus.FINISHING:
-      return { bg: 'bg-blue-100', text: 'text-blue-800', bgBar: 'bg-blue-400' };
-    case OrderStatus.PENDING_QUOTE:
-    case OrderStatus.READY_FOR_DELIVERY:
-       return { bg: 'bg-yellow-100', text: 'text-yellow-800', bgBar: 'bg-yellow-400' };
-    case OrderStatus.SHIPPED:
-        return { bg: 'bg-indigo-100', text: 'text-indigo-800', bgBar: 'bg-indigo-400' };
-    case OrderStatus.CANCELLED:
-      return { bg: 'bg-red-100', text: 'text-red-800', bgBar: 'bg-red-400' };
-    default:
-      return { bg: 'bg-gray-100', text: 'text-gray-800', bgBar: 'bg-gray-400' };
-  }
-};
+interface MyOrdersProps {
+  userId: string;
+  navigateTo: (view: View) => void;
+}
 
-const MyOrders: React.FC = () => {
+const statusSteps = [
+  { status: OrderStatus.PENDING_QUOTE, label: 'Pending Quote', step: 1 },
+  { status: OrderStatus.FABRIC_SOURCING, label: 'Fabric Sourcing', step: 2 },
+  { status: OrderStatus.STITCHING, label: 'Stitching', step: 3 },
+  { status: OrderStatus.FINISHING, label: 'Finishing', step: 4 },
+  { status: OrderStatus.READY_FOR_DELIVERY, label: 'Ready for Delivery', step: 5 },
+  { status: OrderStatus.SHIPPED, label: 'Shipped', step: 6 },
+  { status: OrderStatus.DELIVERED, label: 'Delivered', step: 7 }
+];
+
+const MyOrders: React.FC<MyOrdersProps> = ({ userId, navigateTo }) => {
   const [orders, setOrders] = useState<Order[]>([]);
+  const [loading, setLoading] = useState(true);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
 
   useEffect(() => {
-    // In a real app, you would filter orders by the current user's ID.
-    // For this demo, we'll show all orders to demonstrate the data flow.
-    setOrders(getAllOrders());
-  }, []);
+    const fetchOrders = async () => {
+      try {
+        const data = await getCustomerOrders(userId);
+        setOrders(data);
+      } catch (error) {
+        console.error('Failed to fetch orders:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchOrders();
+  }, [userId]);
 
-  const handleViewDetails = (order: Order) => {
-    setSelectedOrder(order);
+  const getCurrentStepIndex = (status: OrderStatus) => {
+    return statusSteps.findIndex((s) => s.status === status);
   };
 
+  if (loading) {
+    return <div className="text-[10px] uppercase tracking-[0.3em] font-bold text-black animate-pulse">Loading Orders...</div>;
+  }
+
+  if (orders.length === 0) {
+    return (
+      <div className="text-center py-24 border border-black bg-gray-50">
+        <h3 className="text-2xl font-serif uppercase text-black tracking-tighter">No Orders Yet</h3>
+        <p className="text-[10px] uppercase tracking-[0.3em] font-bold text-brand-dark-gray mt-4 mb-8">
+          You haven't placed any orders with us.
+        </p>
+        <button
+          onClick={() => navigateTo('order')}
+          className="px-8 py-4 bg-black text-white hover:bg-gray-900 font-bold text-[10px] uppercase tracking-[0.3em] transition-all"
+        >
+          Start a Custom Order
+        </button>
+      </div>
+    );
+  }
+
   return (
-    <div>
-        <h1 className="text-3xl font-bold text-brand-charcoal mb-8">My Orders</h1>
-        <div className="space-y-4">
-            {orders.length > 0 ? orders.map(order => {
-                const statusStyles = getStatusStyles(order.status);
-                return (
-                    <div key={order.id} className="bg-white rounded-xl shadow-sm p-4 flex items-center space-x-4 relative overflow-hidden transition-shadow hover:shadow-md">
-                        <div className={`absolute left-0 top-0 bottom-0 w-1.5 ${statusStyles.bgBar}`}></div>
-                        <div className="flex-grow pl-4">
-                            <p className={`px-2.5 py-1 text-xs font-semibold rounded-full inline-block mb-2 ${statusStyles.bg} ${statusStyles.text}`}>{order.status}</p>
-                            <p className="font-bold text-brand-charcoal text-md">{order.id} - {order.garmentType}</p>
-                            <p className="text-sm text-brand-dark-gray">Ordered on: {order.date}</p>
-                        </div>
-                        <div className="text-right flex-shrink-0">
-                            <p className="font-bold text-lg text-brand-charcoal">
-                                {order.price ? `Rs. ${order.price.toFixed(2)}` : 'Pending Quote'}
-                            </p>
-                            <button 
-                                onClick={() => handleViewDetails(order)} 
-                                className="text-sm font-semibold text-brand-teal hover:underline"
-                            >
-                                View Details
-                            </button>
-                        </div>
-                    </div>
-                );
-            }) : (
-                <div className="bg-white rounded-xl shadow-md p-8 text-center">
-                    <p className="text-brand-dark-gray">You haven't placed any orders yet.</p>
+    <div className="space-y-12">
+      <div className="grid grid-cols-1 gap-8">
+        {orders.map((order) => {
+          const currentIndex = getCurrentStepIndex(order.status);
+          const isBespoke = order.garmentType !== GarmentType.READY_TO_WEAR;
+
+          return (
+            <div key={order.id} className="border border-black bg-white group">
+              <div className="p-8 border-b border-black/20 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-gray-50">
+                <div>
+                  <div className="flex items-center gap-3">
+                    <span className="text-[10px] uppercase tracking-[0.3em] font-bold text-black border border-black px-2 py-1 bg-white">
+                      Order: {order.id.slice(0, 8)}
+                    </span>
+                    {isBespoke && (
+                      <span className="text-[8px] uppercase tracking-widest font-bold text-white bg-black px-2 py-1">
+                        Custom Tailored
+                      </span>
+                    )}
+                  </div>
+                  <h3 className="text-xl font-serif text-black uppercase tracking-wider mt-4">
+                    {order.garmentType}
+                  </h3>
+                  <p className="text-[10px] text-brand-dark-gray uppercase tracking-widest font-bold mt-1">
+                    Ordered on: {new Date(order.createdAt || order.date).toLocaleDateString()}
+                  </p>
                 </div>
-            )}
-        </div>
-        {selectedOrder && (
-            <OrderDetailsModal 
-                order={selectedOrder}
-                onClose={() => setSelectedOrder(null)}
-            />
-        )}
+                <div className="text-left sm:text-right">
+                  <p className="text-sm font-serif font-bold text-black">
+                    Rs. {order.price ? order.price.toLocaleString('en-LK', { minimumFractionDigits: 2 }) : 'Pending Quote'}
+                  </p>
+                  <button
+                    onClick={() => setSelectedOrder(order)}
+                    className="mt-3 text-[9px] uppercase tracking-[0.2em] font-bold text-brand-dark-gray hover:text-black border-b border-transparent hover:border-black transition-colors"
+                  >
+                    View Details
+                  </button>
+                </div>
+              </div>
+
+              {/* BRUTALIST STATUS PIPELINE */}
+              <div className="p-8 overflow-x-auto custom-scrollbar">
+                <div className="min-w-[600px] relative">
+                  <div className="flex items-center justify-between mb-4 relative z-10">
+                    {statusSteps.map((step, index) => {
+                      const isCompleted = index <= currentIndex;
+                      const isActive = index === currentIndex;
+                      return (
+                        <div key={step.status} className="flex flex-col items-center flex-1">
+                          <div className={`w-3 h-3 rounded-none rotate-45 transition-all duration-500 border border-black ${
+                            isCompleted ? 'bg-black' : 'bg-white'
+                          } ${isActive ? 'scale-150 bg-black shadow-xl' : ''}`}></div>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {/* Connecting Line */}
+                  <div className="absolute top-1.5 left-0 w-full h-[1px] bg-black/10 z-0">
+                    <div 
+                      className="h-full bg-black transition-all duration-1000 ease-out"
+                      style={{ width: `${(currentIndex / (statusSteps.length - 1)) * 100}%` }}
+                    ></div>
+                  </div>
+
+                  {/* Labels */}
+                  <div className="flex justify-between mt-6">
+                    {statusSteps.map((step, index) => (
+                      <div key={step.status} className="flex-1 text-center px-1">
+                        <span className={`text-[8px] uppercase tracking-[0.1em] font-bold transition-colors ${
+                          index <= currentIndex ? 'text-black' : 'text-gray-400'
+                        }`}>
+                          {step.label}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {selectedOrder && (
+        <OrderDetailsModal
+          order={selectedOrder}
+          onClose={() => setSelectedOrder(null)}
+          onUpdateStatus={() => {}} 
+          isAdmin={false}
+        />
+      )}
     </div>
   );
 };

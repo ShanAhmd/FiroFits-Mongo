@@ -1,6 +1,5 @@
 import React from 'react';
 import { type View } from '../types';
-import { CheckCircleIcon } from './IconComponents';
 
 interface OrderConfirmationProps {
   navigateTo: (view: View) => void;
@@ -8,41 +7,33 @@ interface OrderConfirmationProps {
 
 const OrderConfirmation: React.FC<OrderConfirmationProps> = ({ navigateTo }) => {
   return (
-    <div className="p-8 md:p-12 text-center animate-fade-in">
-      <CheckCircleIcon className="h-20 w-20 text-brand-success mx-auto mb-4" />
-      <h1 className="text-3xl font-bold text-brand-charcoal">Thank You!</h1>
-      <p className="text-brand-dark-gray mt-2 text-lg">Your order request has been successfully submitted.</p>
-      
-      <div className="mt-10 text-left max-w-lg mx-auto bg-white p-8 rounded-xl border border-brand-light-gray shadow-sm">
-          <h3 className="font-bold text-brand-charcoal mb-5 text-center text-lg">What's Next?</h3>
-          <ul className="space-y-5">
-              <li className="flex items-start">
-                  <span className="bg-brand-teal text-white font-bold rounded-full h-8 w-8 flex items-center justify-center text-md mr-4 flex-shrink-0">1</span>
-                  <p className="text-brand-dark-gray">
-                      Our tailor will carefully review your design and measurements.
-                  </p>
-              </li>
-              <li className="flex items-start">
-                  <span className="bg-brand-teal text-white font-bold rounded-full h-8 w-8 flex items-center justify-center text-md mr-4 flex-shrink-0">2</span>
-                  <p className="text-brand-dark-gray">
-                      We will send a <span className="font-semibold text-brand-charcoal">final price quote</span> to you for approval.
-                  </p>
-              </li>
-              <li className="flex items-start">
-                  <span className="bg-brand-teal text-white font-bold rounded-full h-8 w-8 flex items-center justify-center text-md mr-4 flex-shrink-0">3</span>
-                  <p className="text-brand-dark-gray">
-                      Once approved, we'll start stitching! You can track the progress from your account.
-                  </p>
-              </li>
-          </ul>
+    <div className="animate-fade-in-down max-w-2xl mx-auto py-32 px-4 text-center space-y-8">
+      <div className="w-24 h-24 bg-black rounded-full flex items-center justify-center mx-auto mb-8 border-4 border-black/10">
+        <svg className="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
+        </svg>
       </div>
+      
+      <h2 className="text-5xl font-serif text-black uppercase tracking-tighter">Order Confirmed.</h2>
+      
+      <p className="text-sm font-light text-brand-dark-gray max-w-md mx-auto leading-relaxed tracking-wide">
+        Thank you for your order! Your details have been received and our head tailor will review them shortly.
+      </p>
 
-       <button
-        onClick={() => navigateTo('order')}
-        className="mt-10 px-8 py-3 bg-brand-charcoal text-white rounded-xl font-semibold hover:bg-opacity-90 transition-colors shadow-lg"
-       >
-        Place Another Order
-      </button>
+      <div className="pt-8 flex flex-col sm:flex-row gap-4 justify-center">
+        <button
+          onClick={() => navigateTo('dashboard')}
+          className="px-8 py-4 bg-black text-white font-bold uppercase tracking-[0.3em] text-[10px] hover:bg-gray-900 transition-all"
+        >
+          View My Orders
+        </button>
+        <button
+          onClick={() => navigateTo('home')}
+          className="px-8 py-4 bg-transparent border border-black text-black font-bold uppercase tracking-[0.3em] text-[10px] hover:bg-black hover:text-white transition-all"
+        >
+          Return to Home
+        </button>
+      </div>
     </div>
   );
 };

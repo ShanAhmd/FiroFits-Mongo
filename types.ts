@@ -1,8 +1,5 @@
-// FIX: Replaced the entire file content which was an incorrect copy of App.tsx 
-// with the correct type definitions for the application. This resolves all 
-// import and type errors across the project.
-
 export type View =
+  | 'home'
   | 'login'
   | 'signup'
   | 'dashboard'
@@ -10,7 +7,9 @@ export type View =
   | 'order'
   | 'order-confirmation'
   | 'about'
-  | 'products';
+  | 'products'
+  | 'cart'
+  | 'admin-login';
 
 export enum UserRole {
   CUSTOMER = 'Customer',
@@ -21,7 +20,7 @@ export interface User {
   id: string;
   name: string;
   email: string;
-  passwordHash: string; // In a real app, never store/handle plain passwords on the client.
+  passwordHash: string; // Used for client auth mock fallback
   role: UserRole;
   phone?: string;
   address?: string;
@@ -34,6 +33,7 @@ export enum GarmentType {
   FROCK = 'Frock',
   ABAYA = 'Abaya',
   SCHOOL_UNIFORM = 'School Uniform',
+  READY_TO_WEAR = 'Ready-to-Wear',
   OTHER = 'Other',
 }
 
@@ -72,42 +72,58 @@ export interface OrderData {
 }
 
 export interface Product {
-    id: string;
-    name: string;
-    description: string;
-    price: number;
-    imageUrl: string;
+  id: string;
+  name: string;
+  description: string;
+  price: number;
+  imageUrl: string;
+  category?: string;
+  stock?: number;
+}
+
+export interface CartItem {
+  id: string; // unique cart item id (e.g. product-size combo)
+  product: Product;
+  quantity: number;
+  selectedSize: string;
+  customMeasurements?: Measurements; // Optional bespoke sizing
 }
 
 export enum OrderStatus {
-    PENDING_QUOTE = 'Pending Quote',
-    FABRIC_SOURCING = 'Fabric Sourcing',
-    STITCHING = 'Stitching',
-    FINISHING = 'Finishing',
-    READY_FOR_DELIVERY = 'Ready for Delivery',
-    SHIPPED = 'Shipped',
-    DELIVERED = 'Delivered',
-    CANCELLED = 'Cancelled',
+  PENDING_QUOTE = 'Pending Quote',
+  FABRIC_SOURCING = 'Fabric Sourcing',
+  STITCHING = 'Stitching',
+  FINISHING = 'Finishing',
+  READY_FOR_DELIVERY = 'Ready for Delivery',
+  SHIPPED = 'Shipped',
+  DELIVERED = 'Delivered',
+  CANCELLED = 'Cancelled',
 }
 
-// Represents a file that has been processed and stored (e.g., as a data URL)
-// This is used in the mock database to represent uploaded files.
 export interface StoredFile {
-    name: string;
-    url: string;
-    type: string;
+  name: string;
+  url: string;
+  type: string;
 }
 
 export interface Order {
-    id: string;
-    userId: string;
-    customerName: string;
-    date: string;
-    garmentType: GarmentType;
-    status: OrderStatus;
-    price: number | null;
-    // The raw form data
-    orderData: OrderData;
-    // The data for design files after being processed for storage
-    designFileData?: StoredFile[];
+  id: string;
+  userId: string;
+  customerName: string;
+  date: string;
+  garmentType: GarmentType;
+  status: OrderStatus;
+  price: number | null;
+  orderData: OrderData;
+  designFileData?: StoredFile[];
+  // Online shopping purchases details
+  items?: {
+    productId: string;
+    productName: string;
+    quantity: number;
+    price: number;
+    size: string;
+    customMeasurements?: Measurements;
+  }[];
 }
+

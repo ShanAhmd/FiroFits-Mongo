@@ -3,47 +3,75 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>FiroFits</title>
+    <title>FiroFits — 2026 Modern Atelier</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=Outfit:wght@100..900&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
       tailwind.config = {
         theme: {
           extend: {
             fontFamily: {
-              sans: ['Poppins', 'sans-serif'],
+              sans: ['Outfit', 'sans-serif'],
+              serif: ['Cormorant Garamond', 'serif'],
             },
             colors: {
-              'brand-charcoal': '#2C3E50', // Dark, elegant charcoal
-              'brand-teal': '#1ABC9C',     // Vibrant, modern teal
-              'brand-cream': '#F8F7F4',    // Soft, warm off-white
-              'brand-light-gray': '#EAECEE',
-              'brand-dark-gray': '#7F8C8D',
-              'brand-error': '#E74C3C',
-              'brand-success': '#2ECC71',
+              'brand-charcoal': '#000000', // Pure Onyx Black
+              'brand-teal': '#000000',     // Monochromatic Accent
+              'brand-cream': '#FFFFFF',    // Absolute Pure White
+              'brand-light-gray': '#F2F2F2', // Minimalist Cloud White
+              'brand-dark-gray': '#737373', // Polished Steel Gray
+              'brand-error': '#E11D48',
+              'brand-success': '#10B981',
             },
             backgroundImage: {
-               'gradient-primary': 'linear-gradient(to right, #1ABC9C, #16A085)', // Teal gradient
+              'gradient-primary': 'linear-gradient(to right, #000000, #333333)',
             }
           },
         },
       }
     </script>
-  <script type="importmap">
-{
-  "imports": {
-    "react": "https://aistudiocdn.com/react@^19.2.0",
-    "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/",
-    "react/": "https://aistudiocdn.com/react@^19.2.0/",
-    "@google/genai": "https://aistudiocdn.com/@google/genai@^1.24.0"
-  }
-}
-</script>
-<link rel="stylesheet" href="/index.css">
+    <style>
+      body {
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+        background-color: #FFFFFF;
+        color: #000000;
+        letter-spacing: -0.02em;
+      }
+      .animate-fade-in {
+        animation: fadeIn 0.8s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+      }
+      .animate-slide-up {
+        animation: slideUp 0.8s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+      }
+      @keyframes fadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
+      }
+      @keyframes slideUp {
+        from { opacity: 0; transform: translateY(30px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+      /* Custom smooth scrollbar */
+      ::-webkit-scrollbar {
+        width: 8px;
+      }
+      ::-webkit-scrollbar-track {
+        background: #FFFFFF;
+      }
+      ::-webkit-scrollbar-thumb {
+        background: #E5E5E5;
+        border-radius: 10px;
+      }
+      ::-webkit-scrollbar-thumb:hover {
+        background: #CCCCCC;
+      }
+    </style>
+  <link rel="stylesheet" href="/index.css">
 </head>
-  <body class="bg-brand-cream">
+  <body class="bg-brand-cream selection:bg-black selection:text-white">
     <div id="root"></div>
     <script type="module" src="/index.tsx"></script>
   </body>

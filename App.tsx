@@ -329,14 +329,14 @@ const App: React.FC = () => {
                   disabled={currentStep === 1}
                   className="px-8 py-4 bg-transparent border border-black text-black text-[10px] font-bold uppercase tracking-[0.3em] hover:bg-gray-100 transition-colors disabled:opacity-30 disabled:border-gray-300"
                 >
-                  Abort / Previous
+                  Back
                 </button>
                 <button
                   type="button"
                   onClick={nextStep}
                   className="px-8 py-4 bg-black text-white text-[10px] font-bold uppercase tracking-[0.3em] hover:bg-gray-900 transition-colors"
                 >
-                  Proceed
+                  Next Step
                 </button>
               </div>
             )}
@@ -362,7 +362,9 @@ const App: React.FC = () => {
     <div className="bg-white min-h-screen font-sans text-black flex flex-col justify-between selection:bg-black selection:text-white">
       {notification && <NotificationPanel message={notification} onClose={() => setNotification(null)} />}
       <Header user={currentUser} navigateTo={navigateTo} onLogout={handleLogout} cartItemsCount={totalCartCount} />
-      <main className="w-full px-6 md:px-12 py-24 flex-grow">
+      <main className={`w-full flex-grow ${
+        currentView === 'home' ? 'px-0 pt-[88px] pb-24' : 'px-6 md:px-12 py-24'
+      }`}>
         <div className="w-full">
           {renderContent()}
         </div>

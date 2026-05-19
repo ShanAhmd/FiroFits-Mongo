@@ -10,10 +10,10 @@ const Extras: React.FC<ExtrasProps> = ({ orderData, updateOrderData }) => {
   return (
     <div className="animate-fade-in space-y-12">
       <div className="border-b border-black pb-6">
-        <span className="text-[10px] uppercase tracking-[0.4em] text-brand-dark-gray font-bold block mb-2">Phase 04</span>
-        <h2 className="text-4xl font-serif text-black uppercase tracking-tighter">Configuration Details</h2>
+        <span className="text-[10px] uppercase tracking-[0.4em] text-brand-dark-gray font-bold block mb-2">Step 04</span>
+        <h2 className="text-4xl font-serif text-black uppercase tracking-tighter">Options & Add-ons</h2>
         <p className="text-xs text-brand-dark-gray font-light mt-2 tracking-wide">
-          Select advanced fabrication details for the object.
+          Choose any extra details or custom work you'd like to add.
         </p>
       </div>
 
@@ -25,9 +25,9 @@ const Extras: React.FC<ExtrasProps> = ({ orderData, updateOrderData }) => {
           `}
         >
           <div>
-            <h3 className="text-sm font-sans uppercase tracking-[0.2em] font-bold">Lace / Pearl Integration</h3>
+            <h3 className="text-sm font-sans uppercase tracking-[0.2em] font-bold">Lace & Pearl Embellishments</h3>
             <p className={`text-[10px] mt-1 font-light tracking-widest ${orderData.hasPearlWork ? 'text-gray-400' : 'text-brand-dark-gray'}`}>
-              Embed exquisite lace or hand-stitched pearl matrices into the collar/cuffs.
+              Add hand-stitched pearl detailing or premium lace borders along the collars and cuffs.
             </p>
           </div>
           

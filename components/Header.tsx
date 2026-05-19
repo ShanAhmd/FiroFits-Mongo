@@ -2,6 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { type User, type View, UserRole } from '../types';
 import { FiroFitsLogo, UserCircleIcon } from './IconComponents';
 
+// @ts-ignore
+import logo2 from '../uploads/logo 2.png';
+
 interface HeaderProps {
   user: User | null;
   navigateTo: (view: View) => void;
@@ -42,12 +45,7 @@ const Header: React.FC<HeaderProps> = ({ user, navigateTo, onLogout, cartItemsCo
             onClick={() => navigateTo('home')}
             className="flex items-center gap-2 text-black group text-left"
           >
-            <div>
-              <span className="block font-serif text-xl md:text-2xl tracking-[0.15em] font-medium leading-none">FIROFITS</span>
-              <span className="block text-[6px] md:text-[7px] uppercase tracking-[0.3em] text-brand-dark-gray font-bold mt-1">
-                Custom Tailoring
-              </span>
-            </div>
+            <img src={logo2} alt="FIROFITS" className="h-24 md:h-30 w-auto object-contain" />
           </button>
         </div>
 

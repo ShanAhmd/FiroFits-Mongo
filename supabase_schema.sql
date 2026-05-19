@@ -12,6 +12,9 @@
 -- 1. DROP EXISTING TABLES (Failsafe & Clean Slate Setup)
 -- --------------------------------------------------------------------
 DROP TABLE IF EXISTS orders CASCADE;
+DROP TABLE IF EXISTS package_items CASCADE;
+DROP TABLE IF EXISTS packages CASCADE;
+DROP TABLE IF EXISTS coupons CASCADE;
 DROP TABLE IF EXISTS products CASCADE;
 DROP TABLE IF EXISTS users CASCADE;
 
@@ -40,7 +43,54 @@ CREATE TABLE products (
     price NUMERIC(12, 2) NOT NULL,
     image_url TEXT,
     category TEXT NOT NULL DEFAULT 'Ready-to-Wear',
+    product_category TEXT DEFAULT 'Unisex', -- Values: Men, Women, Kids, Unisex, Accessories, Bridal
+    sub_category TEXT,                       -- e.g. Frocks, Shirts, Blouses
     stock INTEGER NOT NULL DEFAULT 0,
+    barcode TEXT,                            -- Auto-generated SKU e.g. FF-WMN-48291
+    tags TEXT[],                             -- Searchable tag array
+    sizes TEXT[],                            -- Available sizes
+    created_at TIMESTAMPTZ DEFAULT now() NOT NULL
+);
+
+-- D. PACKAGES TABLE (Seasonal / Festival / Offer Deals)
+CREATE TABLE packages (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    name TEXT NOT NULL,
+    slug TEXT UNIQUE NOT NULL,
+    type TEXT NOT NULL DEFAULT 'Special Offer', -- Seasonal, Festival, Special Offer, Bundle
+    tag TEXT NOT NULL,                           -- e.g. SUMMER 2026, EID SPECIAL
+    description TEXT,
+    banner_image_url TEXT,
+    badge_label TEXT,                            -- e.g. HOT DEAL, LIMITED TIME
+    discount_percent NUMERIC(5,2),
+    discount_flat NUMERIC(12,2),
+    valid_from DATE NOT NULL,
+    valid_to DATE NOT NULL,
+    is_active BOOLEAN DEFAULT true,
+    created_at TIMESTAMPTZ DEFAULT now() NOT NULL
+);
+
+-- E. PACKAGE ITEMS JOIN TABLE
+CREATE TABLE package_items (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    package_id UUID REFERENCES packages(id) ON DELETE CASCADE,
+    product_id UUID,
+    product_name TEXT,
+    qty INTEGER NOT NULL DEFAULT 1
+);
+
+-- F. COUPONS TABLE
+CREATE TABLE coupons (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    code TEXT UNIQUE NOT NULL,
+    discount_percent NUMERIC(5,2),
+    discount_flat NUMERIC(12,2),
+    min_order_value NUMERIC(12,2) DEFAULT 0,
+    max_uses INTEGER,
+    used_count INTEGER DEFAULT 0,
+    expires_at DATE NOT NULL,
+    is_active BOOLEAN DEFAULT true,
+    description TEXT,
     created_at TIMESTAMPTZ DEFAULT now() NOT NULL
 );
 
@@ -52,6 +102,9 @@ CREATE TABLE orders (
     date DATE NOT NULL DEFAULT CURRENT_DATE,
     garment_type TEXT NOT NULL, -- Enum: 'SAREE_BLOUSE', 'ABAYA', 'LADIES_DRESS', 'SCHOOL_UNIFORM', 'OTHER'
     status TEXT NOT NULL, -- Enum: 'PENDING_QUOTE', 'QUOTE_ISSUED', 'FABRIC_SOURCING', 'CUTTING', 'STITCHING', 'READY_TO_SHIP', 'COMPLETED'
+    payment_status TEXT DEFAULT 'Unpaid', -- Enum: 'Unpaid', 'Advance Paid', 'Fully Paid', 'Cash on Delivery'
+    internal_notes TEXT, -- Admin-only private order notes
+    invoice_url TEXT, -- URL to the generated PDF receipt
     price NUMERIC(12, 2), -- Tailoring custom price quote (nullable initially)
     order_data JSONB NOT NULL, -- Stores custom measurements, delivery details, unit, pearl work toggle, etc.
     design_file_data JSONB DEFAULT '[]'::jsonb, -- Base64 encoded reference image matrices
@@ -65,6 +118,9 @@ CREATE TABLE orders (
 ALTER TABLE users ENABLE ROW LEVEL SECURITY;
 ALTER TABLE products ENABLE ROW LEVEL SECURITY;
 ALTER TABLE orders ENABLE ROW LEVEL SECURITY;
+ALTER TABLE packages ENABLE ROW LEVEL SECURITY;
+ALTER TABLE package_items ENABLE ROW LEVEL SECURITY;
+ALTER TABLE coupons ENABLE ROW LEVEL SECURITY;
 
 -- --------------------------------------------------------------------
 -- 4. CONSTRUCT SECURITY POLICIES (Access Controls)
@@ -110,6 +166,23 @@ CREATE POLICY "Allow public order select queries" ON orders
 -- Admins and users can update order details or status transitions
 CREATE POLICY "Allow order update transitions" ON orders 
     FOR UPDATE USING (true) WITH CHECK (true);
+
+-- D. PACKAGES POLICIES
+CREATE POLICY "Allow public read packages" ON packages FOR SELECT USING (true);
+CREATE POLICY "Allow admin insert packages" ON packages FOR INSERT WITH CHECK (true);
+CREATE POLICY "Allow admin update packages" ON packages FOR UPDATE USING (true) WITH CHECK (true);
+CREATE POLICY "Allow admin delete packages" ON packages FOR DELETE USING (true);
+
+-- E. PACKAGE ITEMS POLICIES
+CREATE POLICY "Allow public read package_items" ON package_items FOR SELECT USING (true);
+CREATE POLICY "Allow admin manage package_items" ON package_items FOR INSERT WITH CHECK (true);
+CREATE POLICY "Allow admin delete package_items" ON package_items FOR DELETE USING (true);
+
+-- F. COUPONS POLICIES
+CREATE POLICY "Allow public read coupons" ON coupons FOR SELECT USING (true);
+CREATE POLICY "Allow admin manage coupons" ON coupons FOR INSERT WITH CHECK (true);
+CREATE POLICY "Allow admin update coupons" ON coupons FOR UPDATE USING (true) WITH CHECK (true);
+CREATE POLICY "Allow admin delete coupons" ON coupons FOR DELETE USING (true);
 
 -- --------------------------------------------------------------------
 -- 5. SEED PRE-CONSTRUCTED CORE PRODUCTION READY DATA

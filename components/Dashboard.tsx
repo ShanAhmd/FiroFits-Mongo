@@ -9,11 +9,16 @@ interface DashboardProps {
   onUpdateUser: (updatedData: Partial<User>) => Promise<void>;
   notification: string | null;
   setNotification: (msg: string | null) => void;
+  hasDraft?: boolean;
+  resumeDraft?: () => void;
+  clearDraft?: () => void;
 }
 
 type DashboardTab = 'orders' | 'profile';
 
-const Dashboard: React.FC<DashboardProps> = ({ user, navigateTo, onUpdateUser, notification, setNotification }) => {
+const Dashboard: React.FC<DashboardProps> = ({ 
+  user, navigateTo, onUpdateUser, notification, setNotification, hasDraft, resumeDraft, clearDraft 
+}) => {
   const [activeTab, setActiveTab] = useState<DashboardTab>('orders');
 
   return (
@@ -70,7 +75,29 @@ const Dashboard: React.FC<DashboardProps> = ({ user, navigateTo, onUpdateUser, n
         </div>
 
         {/* Main Content Area */}
-        <div className="flex-1">
+        <div className="flex-1 space-y-6">
+          {hasDraft && activeTab === 'orders' && resumeDraft && clearDraft && (
+            <div className="bg-amber-50 border border-amber-200 p-6 flex flex-col sm:flex-row justify-between items-center gap-4 shadow-sm animate-fade-in-down">
+              <div>
+                <h3 className="text-sm font-extrabold uppercase tracking-widest text-amber-900">Pending Order Draft</h3>
+                <p className="text-xs text-amber-700 mt-1 font-medium">You have an unfinished custom tailoring order.</p>
+              </div>
+              <div className="flex gap-3">
+                <button 
+                  onClick={clearDraft}
+                  className="px-4 py-2 text-[10px] font-bold uppercase tracking-widest text-amber-700 hover:bg-amber-100 transition-colors"
+                >
+                  Discard
+                </button>
+                <button 
+                  onClick={resumeDraft}
+                  className="px-6 py-2 bg-amber-600 text-white text-[10px] font-extrabold uppercase tracking-widest hover:bg-amber-700 shadow-lg transition-colors"
+                >
+                  Resume Order
+                </button>
+              </div>
+            </div>
+          )}
           {activeTab === 'orders' && <MyOrders userId={user.id} navigateTo={navigateTo} />}
           {activeTab === 'profile' && <MyProfile user={user} onUpdateUser={onUpdateUser} />}
         </div>

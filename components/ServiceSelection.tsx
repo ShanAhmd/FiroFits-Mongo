@@ -45,6 +45,23 @@ const ServiceSelection: React.FC<ServiceSelectionProps> = ({ orderData, updateOr
           </div>
         ))}
       </div>
+
+      {orderData.service === GarmentType.OTHER && (
+        <div className="pt-8 border-t border-black/10 animate-fade-in space-y-4">
+          <label className="block text-[10px] uppercase tracking-[0.3em] font-bold text-black" htmlFor="customGarmentName">
+            Specify Custom Design / Garment Name <span className="text-red-500">*</span>
+          </label>
+          <input
+            id="customGarmentName"
+            type="text"
+            placeholder="e.g., Shalwar Kameez, Lehenga, Modern Kurti, Palazzo Set"
+            value={orderData.customGarmentName || ''}
+            onChange={(e) => updateOrderData({ customGarmentName: e.target.value })}
+            className="w-full bg-transparent border border-black/20 focus:border-black focus:ring-0 px-4 py-3 text-xs font-bold uppercase tracking-widest text-black rounded-none transition-colors placeholder-gray-300 font-sans"
+            required
+          />
+        </div>
+      )}
     </div>
   );
 };

@@ -9,6 +9,7 @@ import {
   type Product,
   type CartItem,
   type Measurements,
+  type CustomTailoringItem,
 } from './types';
 import {
   authenticateUser,
@@ -25,6 +26,7 @@ import DeliveryDetails from './components/DeliveryDetails';
 import Submission from './components/Submission';
 import OrderConfirmation from './components/OrderConfirmation';
 import StepIndicator from './components/StepIndicator';
+import AgreementStep from './components/AgreementStep';
 import LoginPage from './components/LoginPage';
 import SignupPage from './components/SignupPage';
 import AboutPage from './components/AboutPage';
@@ -35,6 +37,7 @@ import AdminDashboard from './components/AdminDashboard';
 import AdminLoginPage from './components/AdminLoginPage';
 import NotificationPanel from './components/NotificationPanel';
 import Footer from './components/Footer';
+import OrderTracking from './components/OrderTracking';
 
 const INITIAL_ORDER_DATA: OrderData = {
   service: null,
@@ -54,17 +57,25 @@ const INITIAL_ORDER_DATA: OrderData = {
   unit: Unit.INCHES,
   hasPearlWork: false,
   deliveryDetails: {
-    name: '',
-    contact: '',
+    fullName: '',
     address: '',
+    cityPostal: '',
+    district: '',
+    mobile: '',
+    altMobile: '',
+    email: '',
+    paymentMethod: 'COD',
     deliveryDate: '',
   },
+  customGarmentName: '',
+  customItems: [],
 };
 
 const App: React.FC = () => {
   const [currentView, setCurrentView] = useState<View>('home');
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [notification, setNotification] = useState<string | null>(null);
+  const [modalAlert, setModalAlert] = useState<{ message: string; title?: string } | null>(null);
   
   // Shopping Cart state
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
@@ -72,8 +83,53 @@ const App: React.FC = () => {
   // Order form state
   const [currentStep, setCurrentStep] = useState(1);
   const [orderData, setOrderData] = useState<OrderData>(INITIAL_ORDER_DATA);
+  const [agreementAgreed, setAgreementAgreed] = useState(false);
+  const [hasDraft, setHasDraft] = useState(false);
 
-  const totalSteps = 6;
+  useEffect(() => {
+    const draftStr = localStorage.getItem('firofits_draft_order');
+    if (draftStr) {
+      try {
+        const draft = JSON.parse(draftStr);
+        if (draft.step && draft.orderData) {
+          setHasDraft(true);
+        }
+      } catch (e) {}
+    }
+  }, []);
+
+  useEffect(() => {
+    if (currentStep > 1) {
+      // Exclude File objects which cannot be JSON serialized
+      const safeData = { ...orderData, designFiles: [] };
+      localStorage.setItem('firofits_draft_order', JSON.stringify({
+        step: currentStep,
+        orderData: safeData,
+        agreementAgreed
+      }));
+    }
+  }, [currentStep, orderData, agreementAgreed]);
+
+  const resumeDraft = () => {
+    const draftStr = localStorage.getItem('firofits_draft_order');
+    if (draftStr) {
+      try {
+        const draft = JSON.parse(draftStr);
+        setOrderData({ ...draft.orderData, designFiles: [] });
+        setCurrentStep(draft.step);
+        setAgreementAgreed(draft.agreementAgreed || false);
+        setCurrentView('order');
+        setHasDraft(false);
+      } catch (e) {}
+    }
+  };
+
+  const clearDraft = () => {
+    localStorage.removeItem('firofits_draft_order');
+    setHasDraft(false);
+  };
+
+  const totalSteps = 7;
 
   useEffect(() => {
     if (notification) {
@@ -85,9 +141,11 @@ const App: React.FC = () => {
   const navigateTo = (view: View) => {
     window.scrollTo(0, 0);
     if (view === 'order') {
-      // Reset order form when navigating back to it
-      setOrderData(INITIAL_ORDER_DATA);
-      setCurrentStep(1);
+      if (!hasDraft) {
+        setOrderData(INITIAL_ORDER_DATA);
+        setCurrentStep(1);
+        setAgreementAgreed(false);
+      }
     }
     setCurrentView(view);
   };
@@ -179,7 +237,129 @@ const App: React.FC = () => {
     setOrderData(prev => ({ ...prev, ...data }));
   };
 
+  const editGarment = (itemId: string) => {
+    const targetItem = orderData.customItems.find(i => i.id === itemId);
+    if (!targetItem) return;
+
+    let updatedCustomItems = orderData.customItems.filter(i => i.id !== itemId);
+
+    // If there is currently a garment in the form, save it as a draft so they do not lose it
+    if (orderData.service) {
+      const currentAsDraft: CustomTailoringItem = {
+        id: Math.random().toString(36).substring(2, 9),
+        service: orderData.service,
+        customGarmentName: orderData.customGarmentName,
+        designFiles: orderData.designFiles,
+        specialInstructions: orderData.specialInstructions,
+        measurements: { ...orderData.measurements },
+        unit: orderData.unit,
+        hasPearlWork: orderData.hasPearlWork,
+      };
+      updatedCustomItems.push(currentAsDraft);
+    }
+
+    setOrderData(prev => ({
+      ...prev,
+      service: targetItem.service,
+      customGarmentName: targetItem.customGarmentName || '',
+      designFiles: targetItem.designFiles || [],
+      specialInstructions: targetItem.specialInstructions || '',
+      measurements: { ...targetItem.measurements },
+      unit: targetItem.unit,
+      hasPearlWork: targetItem.hasPearlWork,
+      customItems: updatedCustomItems,
+    }));
+
+    setCurrentStep(1); // Go back to Step 1 to edit
+    setNotification(`Loaded ${targetItem.service === GarmentType.OTHER ? targetItem.customGarmentName || 'Other Design' : targetItem.service} for editing.`);
+  };
+
+  const addAnotherGarment = () => {
+    if (!orderData.service) {
+      setModalAlert({ message: "Please select a garment type before adding." });
+      return;
+    }
+    const newItem: CustomTailoringItem = {
+      id: Math.random().toString(36).substring(2, 9),
+      service: orderData.service,
+      customGarmentName: orderData.customGarmentName,
+      designFiles: orderData.designFiles,
+      specialInstructions: orderData.specialInstructions,
+      measurements: { ...orderData.measurements },
+      unit: orderData.unit,
+      hasPearlWork: orderData.hasPearlWork,
+    };
+    setOrderData(prev => ({
+      ...prev,
+      service: null,
+      customGarmentName: '',
+      designFiles: [],
+      specialInstructions: '',
+      measurements: {
+        shoulder: '',
+        chest: '',
+        waist: '',
+        hip: '',
+        fullLength: '',
+        vestLength: '',
+        sleeveLength: '',
+        armhole: '',
+        collarSize: '',
+      },
+      hasPearlWork: false,
+      customItems: [...prev.customItems, newItem],
+    }));
+    setCurrentStep(1); // Reset to service selection
+    setNotification(`Dress #${orderData.customItems.length + 1} added! Choose the style for your next dress.`);
+  };
+
   const nextStep = () => {
+    if (currentStep === 4) {
+      if (orderData.service) {
+        // Automatically save the current garment configuration
+        const newItem: CustomTailoringItem = {
+          id: Math.random().toString(36).substring(2, 9),
+          service: orderData.service,
+          customGarmentName: orderData.customGarmentName,
+          designFiles: orderData.designFiles,
+          specialInstructions: orderData.specialInstructions,
+          measurements: { ...orderData.measurements },
+          unit: orderData.unit,
+          hasPearlWork: orderData.hasPearlWork,
+        };
+        setOrderData(prev => ({
+          ...prev,
+          service: null,
+          customGarmentName: '',
+          designFiles: [],
+          specialInstructions: '',
+          measurements: {
+            shoulder: '',
+            chest: '',
+            waist: '',
+            hip: '',
+            fullLength: '',
+            vestLength: '',
+            sleeveLength: '',
+            armhole: '',
+            collarSize: '',
+          },
+          hasPearlWork: false,
+          customItems: [...prev.customItems, newItem],
+        }));
+      } else if (orderData.customItems.length === 0) {
+        setModalAlert({ message: "Please select a style and specify details for at least one garment." });
+        return;
+      }
+    }
+
+    if (currentStep === 6) {
+      if (!agreementAgreed) {
+        setModalAlert({ message: "Please read and agree to the Rules & Agreement to proceed." });
+        return;
+      }
+    }
+
     if (currentStep < totalSteps) {
       setCurrentStep(currentStep + 1);
     }
@@ -196,7 +376,13 @@ const App: React.FC = () => {
       case 1:
         return <ServiceSelection orderData={orderData} updateOrderData={updateOrderData} />;
       case 2:
-        return <DesignUpload orderData={orderData} updateOrderData={updateOrderData} />;
+        return (
+          <DesignUpload 
+            orderData={orderData} 
+            updateOrderData={updateOrderData} 
+            showModalAlert={(msg) => setModalAlert({ message: msg })} 
+          />
+        );
       case 3:
         return (
           <MeasurementsForm 
@@ -210,8 +396,9 @@ const App: React.FC = () => {
       case 5:
         return <DeliveryDetails orderData={orderData} updateOrderData={updateOrderData} />;
       case 6:
-        if (!currentUser) return null;
-        return <Submission orderData={orderData} user={currentUser} navigateTo={navigateTo} />;
+        return <AgreementStep agreed={agreementAgreed} onAgreeChange={setAgreementAgreed} />;
+      case 7:
+        return <Submission orderData={orderData} user={currentUser} navigateTo={navigateTo} prevStep={prevStep} />;
       default:
         return null;
     }
@@ -227,6 +414,9 @@ const App: React.FC = () => {
     }
     if (currentView === 'products') {
       return <CustomProductsPage onAddToCart={handleAddToCart} onOrderBespoke={handleOrderProduct} />;
+    }
+    if (currentView === 'order-tracking') {
+      return <OrderTracking />;
     }
     if (currentView === 'signup') {
       return !currentUser ? (
@@ -253,6 +443,9 @@ const App: React.FC = () => {
             onUpdateUser={handleUpdateUser}
             notification={notification}
             setNotification={setNotification}
+            hasDraft={hasDraft}
+            resumeDraft={resumeDraft}
+            clearDraft={clearDraft}
           />
         );
       }
@@ -280,6 +473,9 @@ const App: React.FC = () => {
             onUpdateUser={handleUpdateUser}
             notification={notification}
             setNotification={setNotification}
+            hasDraft={hasDraft}
+            resumeDraft={resumeDraft}
+            clearDraft={clearDraft}
           />
         );
       case 'admin-dashboard':
@@ -316,13 +512,57 @@ const App: React.FC = () => {
           return null;
         }
         return (
-          <div className="max-w-4xl mx-auto space-y-8">
+          <div className="max-w-4xl mx-auto space-y-8 animate-fade-in">
             <div className="mb-12">
               <StepIndicator currentStep={currentStep} totalSteps={totalSteps} />
             </div>
+
+            {/* Custom Tailoring Cart Items indicator */}
+            {orderData.customItems && orderData.customItems.length > 0 && currentStep < 5 && (
+              <div className="bg-gray-50 border border-black/10 p-6 space-y-4">
+                <h4 className="text-[10px] font-sans text-brand-dark-gray font-bold uppercase tracking-[0.3em] border-b border-black/15 pb-2">
+                  Dresses in this custom order ({orderData.customItems.length})
+                </h4>
+                <div className="flex flex-wrap gap-3">
+                  {orderData.customItems.map((item, idx) => (
+                    <div key={item.id} className="bg-white border border-black/20 flex items-center transition-all hover:border-black">
+                      <button
+                        type="button"
+                        onClick={() => editGarment(item.id)}
+                        className="text-[10px] font-bold text-black uppercase tracking-wider font-sans px-3 py-2 border-r border-black/10 hover:bg-black/5 transition-colors flex items-center gap-1.5"
+                        title="Click to edit this dress"
+                      >
+                        <span className="text-[8px] bg-black text-white px-1 py-0.2 rounded font-mono">#{idx + 1}</span>
+                        <span>
+                          {item.service === GarmentType.OTHER 
+                            ? (item.customGarmentName || 'Other Design') 
+                            : (item.service || 'Custom Dress')}
+                        </span>
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-2.5 h-2.5 text-brand-dark-gray ml-1"><path strokeLinecap="round" strokeLinejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L6.832 19.82a4.5 4.5 0 0 1-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 0 1 1.13-1.897L16.863 4.487Zm0 0L19.5 7.125" /></svg>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setOrderData(prev => ({
+                            ...prev,
+                            customItems: prev.customItems.filter(i => i.id !== item.id)
+                          }));
+                          setNotification("Garment removed from order.");
+                        }}
+                        className="text-red-500 hover:text-red-700 hover:bg-red-50 font-bold text-xs px-2.5 py-2 h-full transition-colors"
+                        title="Remove dress"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {renderOrderStep()}
             {currentView === 'order' && currentStep < totalSteps && (
-              <div className="mt-12 flex justify-between">
+              <div className="mt-12 flex justify-between items-center border-t border-black/10 pt-8">
                 <button
                   type="button"
                   onClick={prevStep}
@@ -331,13 +571,28 @@ const App: React.FC = () => {
                 >
                   Back
                 </button>
-                <button
-                  type="button"
-                  onClick={nextStep}
-                  className="px-8 py-4 bg-black text-white text-[10px] font-bold uppercase tracking-[0.3em] hover:bg-gray-900 transition-colors"
-                >
-                  Next Step
-                </button>
+                <div className="flex gap-4">
+                  {currentStep === 4 && (
+                    <button
+                      type="button"
+                      onClick={addAnotherGarment}
+                      className="px-8 py-4 bg-transparent border border-black text-black text-[10px] font-bold uppercase tracking-[0.3em] hover:bg-gray-100 transition-colors"
+                    >
+                      + Stitch Another Dress
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={nextStep}
+                    className="px-8 py-4 bg-black text-white text-[10px] font-bold uppercase tracking-[0.3em] hover:bg-gray-900 transition-colors"
+                  >
+                    {currentStep === 4 
+                      ? 'Continue to Delivery' 
+                      : currentStep === 6 
+                        ? 'Agree & Continue' 
+                        : 'Next Step'}
+                  </button>
+                </div>
               </div>
             )}
           </div>
@@ -361,6 +616,27 @@ const App: React.FC = () => {
   return (
     <div className="bg-white min-h-screen font-sans text-black flex flex-col justify-between selection:bg-black selection:text-white">
       {notification && <NotificationPanel message={notification} onClose={() => setNotification(null)} />}
+      {modalAlert && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[250] flex items-center justify-center p-4">
+          <div className="bg-white border border-black max-w-sm w-full p-8 space-y-6 shadow-2xl animate-fade-in">
+            <div className="flex items-center gap-3 text-black">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-5 h-5 text-black"><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z" /></svg>
+              <h3 className="text-lg font-serif text-black uppercase tracking-tight">{modalAlert.title || 'Attention Required'}</h3>
+            </div>
+            <p className="text-xs text-brand-dark-gray leading-relaxed font-light uppercase tracking-wider">
+              {modalAlert.message}
+            </p>
+            <div className="pt-2">
+              <button
+                onClick={() => setModalAlert(null)}
+                className="w-full py-4 bg-black hover:bg-gray-900 text-white text-[10px] uppercase tracking-[0.3em] font-bold transition-all"
+              >
+                Understood
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       <Header user={currentUser} navigateTo={navigateTo} onLogout={handleLogout} cartItemsCount={totalCartCount} />
       <main className={`w-full flex-grow ${
         currentView === 'home' ? 'px-0 pt-[88px] pb-24' : 'px-6 md:px-12 py-24'

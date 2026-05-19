@@ -6,7 +6,7 @@ interface StepIndicatorProps {
 }
 
 const StepIndicator: React.FC<StepIndicatorProps> = ({ currentStep, totalSteps }) => {
-  const steps = ["Garment Type", "Design Details", "Measurements", "Add-ons", "Delivery Info", "Submit Order"];
+  const steps = ["Garment Type", "Design Details", "Measurements", "Add-ons", "Delivery Info", "Agreement", "Submit Order"];
 
   return (
     <div className="w-full">

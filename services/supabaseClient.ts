@@ -5,9 +5,15 @@ import {
   UserRole,
   type Product,
   type Order,
+  type Package,
+  type PackageItem,
+  type Coupon,
+  PackageType,
+  ProductCategory,
   OrderStatus,
   GarmentType,
   Unit,
+  PaymentStatus,
 } from '../types';
 
 // Environment variables from Vite
@@ -135,7 +141,8 @@ const DEFAULT_ORDERS: Order[] = [
         contact: '0771234567',
         address: '123 Galle Road, Colombo 3',
         deliveryDate: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-      },
+      } as any,
+      customItems: [],
     },
   },
   {
@@ -168,7 +175,8 @@ const DEFAULT_ORDERS: Order[] = [
         contact: '0771234567',
         address: '123 Galle Road, Colombo 3',
         deliveryDate: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-      },
+      } as any,
+      customItems: [],
     },
   },
 ];
@@ -508,14 +516,112 @@ export const deleteProduct = async (productId: string): Promise<boolean> => {
   return filtered.length < initialLength;
 };
 
-// Helper: Convert File to storable Data URL
-const fileToDataUrl = (file: File): Promise<{ name: string; url: string; type: string }> => {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve({ name: file.name, url: reader.result as string, type: file.type });
-    reader.onerror = (error) => reject(error);
-    reader.readAsDataURL(file);
-  });
+// Helper: Upload file to products_uploads storage bucket
+export const uploadProductImage = async (fileOrBase64: File | string, filename: string): Promise<string> => {
+  if (!isUsingSupabase || !supabase) {
+    if (typeof fileOrBase64 === 'string') return fileOrBase64;
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result as string);
+      reader.readAsDataURL(fileOrBase64 as File);
+    });
+  }
+
+  try {
+    let body: Blob | File;
+    let contentType = 'image/jpeg';
+    
+    if (typeof fileOrBase64 === 'string') {
+      if (!fileOrBase64.startsWith('data:image')) {
+        return fileOrBase64;
+      }
+      const parts = fileOrBase64.split(';base64,');
+      const base64Data = parts[1];
+      const match = parts[0].match(/:(.*?)$/);
+      if (match) contentType = match[1];
+      
+      const byteCharacters = atob(base64Data);
+      const byteNumbers = new Array(byteCharacters.length);
+      for (let i = 0; i < byteCharacters.length; i++) {
+        byteNumbers[i] = byteCharacters.charCodeAt(i);
+      }
+      const byteArray = new Uint8Array(byteNumbers);
+      body = new Blob([byteArray], { type: contentType });
+    } else {
+      body = fileOrBase64;
+      contentType = fileOrBase64.type;
+    }
+
+    const cleanName = filename.replace(/[^a-zA-Z0-9.]/g, '_');
+    const path = `${Date.now()}-${cleanName}`;
+    const { data, error } = await supabase.storage
+      .from('products_uploads')
+      .upload(path, body, {
+        cacheControl: '3600',
+        upsert: true,
+        contentType: contentType
+      });
+
+    if (error) throw error;
+
+    const { data: publicUrlData } = supabase.storage
+      .from('products_uploads')
+      .getPublicUrl(data.path);
+
+    return publicUrlData.publicUrl;
+  } catch (error) {
+    console.error('Error uploading product image:', error);
+    if (typeof fileOrBase64 === 'string') return fileOrBase64;
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result as string);
+      reader.readAsDataURL(fileOrBase64 as File);
+    });
+  }
+};
+
+// Helper: Upload file to products_uploads storage bucket for customer design references
+const uploadFileToSupabase = async (file: File): Promise<{ name: string; url: string; type: string }> => {
+  if (!isUsingSupabase || !supabase) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve({ name: file.name, url: reader.result as string, type: file.type });
+      reader.onerror = (error) => reject(error);
+      reader.readAsDataURL(file);
+    });
+  }
+
+  try {
+    const cleanFileName = file.name.replace(/[^a-zA-Z0-9.]/g, '_');
+    const path = `${Date.now()}-${cleanFileName}`;
+    const { data, error } = await supabase.storage
+      .from('products_uploads')
+      .upload(path, file, {
+        cacheControl: '3600',
+        upsert: true,
+        contentType: file.type
+      });
+
+    if (error) throw error;
+
+    const { data: publicUrlData } = supabase.storage
+      .from('products_uploads')
+      .getPublicUrl(data.path);
+
+    return {
+      name: file.name,
+      url: publicUrlData.publicUrl,
+      type: file.type
+    };
+  } catch (error) {
+    console.error('Failed uploading design file to Supabase storage:', error);
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve({ name: file.name, url: reader.result as string, type: file.type });
+      reader.onerror = (error) => reject(error);
+      reader.readAsDataURL(file);
+    });
+  }
 };
 
 // ORDERS
@@ -523,23 +629,52 @@ export const createOrder = async (
   newOrderData: Omit<Order, 'id' | 'date' | 'status' | 'price'>
 ): Promise<Order> => {
   const designFileData = await Promise.all(
-    (newOrderData.orderData.designFiles || []).map((file) => fileToDataUrl(file))
+    (newOrderData.orderData.designFiles || []).map((file) => uploadFileToSupabase(file))
+  );
+
+  // Serialize design files for each individual custom garment in the items list
+  const serializedCustomItems = await Promise.all(
+    (newOrderData.orderData.customItems || []).map(async (item) => {
+      const itemFiles = await Promise.all(
+        (item.designFiles || []).map((file) => uploadFileToSupabase(file))
+      );
+      return {
+        id: item.id,
+        service: item.service,
+        customGarmentName: item.customGarmentName,
+        specialInstructions: item.specialInstructions,
+        measurements: item.measurements,
+        unit: item.unit,
+        hasPearlWork: item.hasPearlWork,
+        designFileData: itemFiles,
+      };
+    })
   );
 
   const bespokeId = generateBespokeId('ORD');
   const currentDate = new Date().toISOString().split('T')[0];
 
+  // Set main garment type dynamically
+  let finalGarmentType = newOrderData.garmentType;
+  if (newOrderData.orderData.customItems && newOrderData.orderData.customItems.length > 1) {
+    finalGarmentType = GarmentType.MULTIPLE;
+  } else if (newOrderData.orderData.customItems && newOrderData.orderData.customItems.length === 1) {
+    finalGarmentType = newOrderData.orderData.customItems[0].service;
+  }
+
   const completeOrder: Order = {
     ...newOrderData,
     id: bespokeId,
     date: currentDate,
-    status: newOrderData.items ? OrderStatus.FABRIC_SOURCING : OrderStatus.PENDING_QUOTE, // Ready-to-wear goes straight to fabric sourcing
+    status: newOrderData.items ? OrderStatus.FABRIC_SOURCING : OrderStatus.PENDING_QUOTE,
     price: null,
+    garmentType: finalGarmentType,
     designFileData: designFileData,
   };
 
-  // Safe clean file lists
+  // Safe clean file lists before saving
   completeOrder.orderData.designFiles = [];
+  completeOrder.orderData.customItems = []; // clear raw File objects in memory
 
   if (isUsingSupabase) {
     try {
@@ -558,6 +693,7 @@ export const createOrder = async (
             unit: completeOrder.orderData.unit,
             hasPearlWork: completeOrder.orderData.hasPearlWork,
             deliveryDetails: completeOrder.orderData.deliveryDetails,
+            customItems: serializedCustomItems,
           },
           design_file_data: completeOrder.designFileData || [],
           items: completeOrder.items || null,
@@ -572,15 +708,25 @@ export const createOrder = async (
 
   // LocalStorage fallback
   const orders: Order[] = JSON.parse(localStorage.getItem('firofits_orders') || '[]');
-  orders.unshift(completeOrder);
+  
+  // Keep the serialized custom items in the fallback orderData
+  const completeOrderWithSerialized: Order = {
+    ...completeOrder,
+    orderData: {
+      ...completeOrder.orderData,
+      customItems: serializedCustomItems as any,
+    }
+  };
+
+  orders.unshift(completeOrderWithSerialized);
   localStorage.setItem('firofits_orders', JSON.stringify(orders));
 
   // If ready-to-wear, deduct stock locally
-  if (completeOrder.items) {
+  if (completeOrderWithSerialized.items) {
     const products: Product[] = JSON.parse(
       localStorage.getItem('firofits_products') || '[]'
     );
-    completeOrder.items.forEach((item) => {
+    completeOrderWithSerialized.items.forEach((item) => {
       const pIdx = products.findIndex((p) => p.id === item.productId);
       if (pIdx !== -1 && products[pIdx].stock) {
         products[pIdx].stock = Math.max(0, (products[pIdx].stock || 0) - item.quantity);
@@ -589,7 +735,7 @@ export const createOrder = async (
     localStorage.setItem('firofits_products', JSON.stringify(products));
   }
 
-  return completeOrder;
+  return completeOrderWithSerialized;
 };
 
 export const getAllOrders = async (): Promise<Order[]> => {
@@ -617,6 +763,7 @@ export const getAllOrders = async (): Promise<Order[]> => {
           unit: d.order_data.unit || Unit.INCHES,
           hasPearlWork: d.order_data.hasPearlWork || false,
           deliveryDetails: d.order_data.deliveryDetails || {},
+          customItems: d.order_data.customItems || [],
         },
         designFileData: d.design_file_data || [],
         items: d.items || undefined,
@@ -640,12 +787,16 @@ export const getCustomerOrders = async (userId: string): Promise<Order[]> => {
 export const updateOrderStatus = async (
   orderId: string,
   status: OrderStatus,
-  price: number | null = null
+  price: number | null = null,
+  internalNotes?: string,
+  paymentStatus?: PaymentStatus
 ): Promise<Order | null> => {
   if (isUsingSupabase) {
     try {
       const updatePayload: any = { status };
       if (price !== null) updatePayload.price = price;
+      if (internalNotes !== undefined) updatePayload.internal_notes = internalNotes;
+      if (paymentStatus !== undefined) updatePayload.payment_status = paymentStatus;
 
       const { data, error } = await supabase
         .from('orders')
@@ -671,9 +822,12 @@ export const updateOrderStatus = async (
           unit: data.order_data.unit || Unit.INCHES,
           hasPearlWork: data.order_data.hasPearlWork || false,
           deliveryDetails: data.order_data.deliveryDetails || {},
+          customItems: data.order_data.customItems || [],
         },
         designFileData: data.design_file_data || [],
         items: data.items || undefined,
+        internalNotes: data.internal_notes,
+        paymentStatus: data.payment_status as PaymentStatus,
       };
     } catch (e) {
       console.error('Supabase update order status error:', e);
@@ -688,8 +842,226 @@ export const updateOrderStatus = async (
     if (price !== null) {
       orders[idx].price = price;
     }
+    if (internalNotes !== undefined) {
+      orders[idx].internalNotes = internalNotes;
+    }
+    if (paymentStatus !== undefined) {
+      orders[idx].paymentStatus = paymentStatus;
+    }
     localStorage.setItem('firofits_orders', JSON.stringify(orders));
     return orders[idx];
   }
   return null;
 };
+
+// ============================================================
+// BARCODE / SKU GENERATOR
+// ============================================================
+const generateBarcode = (productCategory?: ProductCategory, category?: string): string => {
+  const catMap: Record<string, string> = {
+    [ProductCategory.MEN]: 'MEN',
+    [ProductCategory.WOMEN]: 'WMN',
+    [ProductCategory.KIDS]: 'KDS',
+    [ProductCategory.UNISEX]: 'UNI',
+    [ProductCategory.ACCESSORIES]: 'ACC',
+    [ProductCategory.BRIDAL]: 'BRD',
+  };
+  const code = productCategory ? (catMap[productCategory] || 'GEN') : 'GEN';
+  const rand = Math.floor(10000 + Math.random() * 90000);
+  return `FF-${code}-${rand}`;
+};
+
+// ============================================================
+// PACKAGES CRUD
+// ============================================================
+export const getPackages = async (): Promise<Package[]> => {
+  if (isUsingSupabase) {
+    try {
+      const { data: pkgs, error } = await supabase
+        .from('packages')
+        .select('*, package_items(*)')
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      return pkgs.map((p: any): Package => ({
+        id: p.id,
+        name: p.name,
+        slug: p.slug,
+        type: p.type as PackageType,
+        tag: p.tag,
+        description: p.description || '',
+        bannerImageUrl: p.banner_image_url || '',
+        badgeLabel: p.badge_label,
+        discountPercent: p.discount_percent ? Number(p.discount_percent) : undefined,
+        discountFlat: p.discount_flat ? Number(p.discount_flat) : undefined,
+        validFrom: p.valid_from,
+        validTo: p.valid_to,
+        isActive: p.is_active,
+        createdAt: p.created_at,
+        items: (p.package_items || []).map((i: any): PackageItem => ({
+          productId: i.product_id,
+          productName: i.product_name,
+          qty: i.qty,
+        })),
+      }));
+    } catch (e) {
+      console.error('getPackages error:', e);
+    }
+  }
+  return JSON.parse(localStorage.getItem('firofits_packages') || '[]');
+};
+
+export const getActivePackages = async (): Promise<Package[]> => {
+  const all = await getPackages();
+  const today = new Date().toISOString().split('T')[0];
+  return all.filter(p => p.isActive && p.validFrom <= today && p.validTo >= today);
+};
+
+export const createPackage = async (pkg: Omit<Package, 'id' | 'createdAt'>): Promise<Package> => {
+  const newPkg: Package = { ...pkg, id: generateBespokeId('PKG'), createdAt: new Date().toISOString() };
+  if (isUsingSupabase) {
+    try {
+      const { data, error } = await supabase.from('packages').insert([{
+        name: newPkg.name, slug: newPkg.slug, type: newPkg.type, tag: newPkg.tag,
+        description: newPkg.description, banner_image_url: newPkg.bannerImageUrl,
+        badge_label: newPkg.badgeLabel, discount_percent: newPkg.discountPercent,
+        discount_flat: newPkg.discountFlat, valid_from: newPkg.validFrom,
+        valid_to: newPkg.validTo, is_active: newPkg.isActive,
+      }]).select().single();
+      if (error) throw error;
+      // Insert package items
+      if (newPkg.items.length > 0) {
+        await supabase.from('package_items').insert(
+          newPkg.items.map(i => ({ package_id: data.id, product_id: i.productId, product_name: i.productName, qty: i.qty }))
+        );
+      }
+      return { ...newPkg, id: data.id };
+    } catch (e) { console.error('createPackage error:', e); }
+  }
+  const packages: Package[] = JSON.parse(localStorage.getItem('firofits_packages') || '[]');
+  packages.unshift(newPkg);
+  localStorage.setItem('firofits_packages', JSON.stringify(packages));
+  return newPkg;
+};
+
+export const updatePackage = async (id: string, updates: Partial<Package>): Promise<Package | null> => {
+  if (isUsingSupabase) {
+    try {
+      const mapped: any = {};
+      if (updates.name !== undefined) mapped.name = updates.name;
+      if (updates.tag !== undefined) mapped.tag = updates.tag;
+      if (updates.type !== undefined) mapped.type = updates.type;
+      if (updates.description !== undefined) mapped.description = updates.description;
+      if (updates.bannerImageUrl !== undefined) mapped.banner_image_url = updates.bannerImageUrl;
+      if (updates.badgeLabel !== undefined) mapped.badge_label = updates.badgeLabel;
+      if (updates.discountPercent !== undefined) mapped.discount_percent = updates.discountPercent;
+      if (updates.discountFlat !== undefined) mapped.discount_flat = updates.discountFlat;
+      if (updates.validFrom !== undefined) mapped.valid_from = updates.validFrom;
+      if (updates.validTo !== undefined) mapped.valid_to = updates.validTo;
+      if (updates.isActive !== undefined) mapped.is_active = updates.isActive;
+      const { error } = await supabase.from('packages').update(mapped).eq('id', id);
+      if (error) throw error;
+      if (updates.items) {
+        await supabase.from('package_items').delete().eq('package_id', id);
+        if (updates.items.length > 0) {
+          await supabase.from('package_items').insert(
+            updates.items.map(i => ({ package_id: id, product_id: i.productId, product_name: i.productName, qty: i.qty }))
+          );
+        }
+      }
+    } catch (e) { console.error('updatePackage error:', e); }
+  }
+  const packages: Package[] = JSON.parse(localStorage.getItem('firofits_packages') || '[]');
+  const idx = packages.findIndex(p => p.id === id);
+  if (idx !== -1) { packages[idx] = { ...packages[idx], ...updates }; localStorage.setItem('firofits_packages', JSON.stringify(packages)); return packages[idx]; }
+  return null;
+};
+
+export const deletePackage = async (id: string): Promise<void> => {
+  if (isUsingSupabase) {
+    try { await supabase.from('packages').delete().eq('id', id); } catch (e) { console.error('deletePackage error:', e); }
+  }
+  const packages: Package[] = JSON.parse(localStorage.getItem('firofits_packages') || '[]');
+  localStorage.setItem('firofits_packages', JSON.stringify(packages.filter(p => p.id !== id)));
+};
+
+// ============================================================
+// COUPONS CRUD
+// ============================================================
+export const getCoupons = async (): Promise<Coupon[]> => {
+  if (isUsingSupabase) {
+    try {
+      const { data, error } = await supabase.from('coupons').select('*').order('created_at', { ascending: false });
+      if (error) throw error;
+      return data.map((c: any): Coupon => ({
+        id: c.id, code: c.code, discountPercent: c.discount_percent ? Number(c.discount_percent) : undefined,
+        discountFlat: c.discount_flat ? Number(c.discount_flat) : undefined,
+        minOrderValue: c.min_order_value ? Number(c.min_order_value) : undefined,
+        maxUses: c.max_uses, usedCount: c.used_count, expiresAt: c.expires_at,
+        isActive: c.is_active, description: c.description,
+      }));
+    } catch (e) { console.error('getCoupons error:', e); }
+  }
+  return JSON.parse(localStorage.getItem('firofits_coupons') || '[]');
+};
+
+export const validateCoupon = async (code: string, orderTotal: number): Promise<Coupon | null> => {
+  const coupons = await getCoupons();
+  const today = new Date().toISOString().split('T')[0];
+  const coupon = coupons.find(c =>
+    c.code.toUpperCase() === code.toUpperCase() &&
+    c.isActive &&
+    c.expiresAt >= today &&
+    (c.minOrderValue === undefined || orderTotal >= c.minOrderValue) &&
+    (c.maxUses === undefined || (c.usedCount || 0) < c.maxUses)
+  );
+  return coupon || null;
+};
+
+export const createCoupon = async (coupon: Omit<Coupon, 'id' | 'usedCount'>): Promise<Coupon> => {
+  const newCoupon: Coupon = { ...coupon, id: generateBespokeId('CPN'), usedCount: 0 };
+  if (isUsingSupabase) {
+    try {
+      const { error } = await supabase.from('coupons').insert([{
+        code: newCoupon.code, discount_percent: newCoupon.discountPercent, discount_flat: newCoupon.discountFlat,
+        min_order_value: newCoupon.minOrderValue, max_uses: newCoupon.maxUses, expires_at: newCoupon.expiresAt,
+        is_active: newCoupon.isActive, description: newCoupon.description,
+      }]);
+      if (error) throw error;
+    } catch (e) { console.error('createCoupon error:', e); }
+  }
+  const coupons: Coupon[] = JSON.parse(localStorage.getItem('firofits_coupons') || '[]');
+  coupons.unshift(newCoupon);
+  localStorage.setItem('firofits_coupons', JSON.stringify(coupons));
+  return newCoupon;
+};
+
+export const updateCoupon = async (id: string, updates: Partial<Coupon>): Promise<void> => {
+  if (isUsingSupabase) {
+    try {
+      const mapped: any = {};
+      if (updates.code !== undefined) mapped.code = updates.code;
+      if (updates.discountPercent !== undefined) mapped.discount_percent = updates.discountPercent;
+      if (updates.discountFlat !== undefined) mapped.discount_flat = updates.discountFlat;
+      if (updates.minOrderValue !== undefined) mapped.min_order_value = updates.minOrderValue;
+      if (updates.maxUses !== undefined) mapped.max_uses = updates.maxUses;
+      if (updates.expiresAt !== undefined) mapped.expires_at = updates.expiresAt;
+      if (updates.isActive !== undefined) mapped.is_active = updates.isActive;
+      if (updates.description !== undefined) mapped.description = updates.description;
+      await supabase.from('coupons').update(mapped).eq('id', id);
+    } catch (e) { console.error('updateCoupon error:', e); }
+  }
+  const coupons: Coupon[] = JSON.parse(localStorage.getItem('firofits_coupons') || '[]');
+  const idx = coupons.findIndex(c => c.id === id);
+  if (idx !== -1) { coupons[idx] = { ...coupons[idx], ...updates }; localStorage.setItem('firofits_coupons', JSON.stringify(coupons)); }
+};
+
+export const deleteCoupon = async (id: string): Promise<void> => {
+  if (isUsingSupabase) {
+    try { await supabase.from('coupons').delete().eq('id', id); } catch (e) { console.error('deleteCoupon error:', e); }
+  }
+  const coupons: Coupon[] = JSON.parse(localStorage.getItem('firofits_coupons') || '[]');
+  localStorage.setItem('firofits_coupons', JSON.stringify(coupons.filter(c => c.id !== id)));
+};
+
+// Re-export generateBarcode for use in admin components
+export { generateBarcode };

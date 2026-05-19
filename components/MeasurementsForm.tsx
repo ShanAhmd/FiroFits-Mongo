@@ -7,6 +7,27 @@ interface MeasurementsFormProps {
   updateMeasurements: (data: Partial<Measurements>) => void;
 }
 
+const MeasurementSVG = ({ area }: { area: string }) => {
+  return (
+    <svg viewBox="0 0 100 150" className="w-full h-24 mx-auto mb-3 text-gray-500 stroke-current" fill="none" strokeWidth="1.5">
+      {/* Basic Mannequin Outline */}
+      <path d="M40 20 C40 10, 60 10, 60 20 C60 25, 55 30, 55 35 L45 35 C45 30, 40 25, 40 20 Z" />
+      <path d="M45 35 L25 40 C15 45, 15 60, 15 60 L22 100 L32 100 L32 140 L68 140 L68 100 L78 100 L85 60 C85 60, 85 45, 75 40 L55 35 Z" />
+      
+      {/* Dynamic Red Measurement Lines */}
+      {area === 'shoulder' && <line x1="20" y1="42" x2="80" y2="42" stroke="#ef4444" strokeWidth="2.5" strokeDasharray="3 2" />}
+      {area === 'chest' && <line x1="16" y1="55" x2="84" y2="55" stroke="#ef4444" strokeWidth="2.5" strokeDasharray="3 2" />}
+      {area === 'waist' && <line x1="20" y1="75" x2="80" y2="75" stroke="#ef4444" strokeWidth="2.5" strokeDasharray="3 2" />}
+      {area === 'hip' && <line x1="16" y1="95" x2="84" y2="95" stroke="#ef4444" strokeWidth="2.5" strokeDasharray="3 2" />}
+      {area === 'fullLength' && <line x1="50" y1="35" x2="50" y2="135" stroke="#ef4444" strokeWidth="2.5" strokeDasharray="3 2" />}
+      {area === 'vestLength' && <line x1="50" y1="35" x2="50" y2="75" stroke="#ef4444" strokeWidth="2.5" strokeDasharray="3 2" />}
+      {area === 'sleeveLength' && <line x1="78" y1="42" x2="88" y2="90" stroke="#ef4444" strokeWidth="2.5" strokeDasharray="3 2" />}
+      {area === 'armhole' && <ellipse cx="78" cy="48" rx="6" ry="12" stroke="#ef4444" strokeWidth="2" strokeDasharray="2 2" />}
+      {area === 'collarSize' && <path d="M42 33 Q50 38 58 33" stroke="#ef4444" strokeWidth="2.5" strokeDasharray="3 1" />}
+    </svg>
+  );
+};
+
 const MeasurementsForm: React.FC<MeasurementsFormProps> = ({ orderData, updateOrderData, updateMeasurements }) => {
   const [activeInfoBox, setActiveInfoBox] = useState<string | null>(null);
 
@@ -84,9 +105,12 @@ const MeasurementsForm: React.FC<MeasurementsFormProps> = ({ orderData, updateOr
             </div>
 
             {/* Hover tooltip */}
-            <div className={`absolute z-10 bottom-full left-0 mb-2 w-full bg-black text-white p-3 border border-white/10 transition-all duration-300 pointer-events-none shadow-2xl ${activeInfoBox === field.id ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'}`}>
-              <span className="block text-[8px] uppercase tracking-[0.3em] font-bold text-gray-400 mb-1">How to Measure</span>
-              <p className="text-xs font-light tracking-wide">{field.desc}</p>
+            <div className={`absolute z-10 bottom-full left-0 mb-2 w-full bg-black text-white p-5 border border-white/10 transition-all duration-300 pointer-events-none shadow-2xl ${activeInfoBox === field.id ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'}`}>
+              <MeasurementSVG area={field.id} />
+              <div className="text-center">
+                <span className="block text-[9px] uppercase tracking-[0.3em] font-bold text-red-400 mb-1">{field.label}</span>
+                <p className="text-xs font-light tracking-wide text-gray-300">{field.desc}</p>
+              </div>
             </div>
           </div>
         ))}

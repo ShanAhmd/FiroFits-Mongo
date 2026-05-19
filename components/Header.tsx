@@ -54,6 +54,7 @@ const Header: React.FC<HeaderProps> = ({ user, navigateTo, onLogout, cartItemsCo
           <NavLink onClick={() => navigateTo('home')}>Home</NavLink>
           <NavLink onClick={() => navigateTo('products')}>Shop</NavLink>
           <NavLink onClick={() => navigateTo('about')}>About Us</NavLink>
+          <NavLink onClick={() => navigateTo('order-tracking')}>Track Order</NavLink>
           {user && user.role === UserRole.CUSTOMER && (
             <NavLink onClick={() => navigateTo('order')}>Bespoke Tailoring</NavLink>
           )}

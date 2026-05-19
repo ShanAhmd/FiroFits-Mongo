@@ -9,7 +9,11 @@ export type View =
   | 'about'
   | 'products'
   | 'cart'
-  | 'admin-login';
+  | 'admin-login'
+  | 'packages'
+  | 'package-detail'
+  | 'order-tracking'
+  | 'wishlist';
 
 export enum UserRole {
   CUSTOMER = 'Customer',
@@ -35,6 +39,7 @@ export enum GarmentType {
   SCHOOL_UNIFORM = 'School Uniform',
   READY_TO_WEAR = 'Ready-to-Wear',
   OTHER = 'Other',
+  MULTIPLE = 'Multiple Custom Items',
 }
 
 export enum Unit {
@@ -55,10 +60,26 @@ export interface Measurements {
 }
 
 export interface DeliveryDetails {
-  name: string;
-  contact: string;
+  fullName: string;
   address: string;
+  cityPostal: string;
+  district: string;
+  mobile: string;
+  altMobile: string;
+  email: string;
+  paymentMethod: 'COD' | 'Online Transfer';
   deliveryDate: string;
+}
+
+export interface CustomTailoringItem {
+  id: string;
+  service: GarmentType;
+  customGarmentName?: string;
+  designFiles: File[];
+  specialInstructions: string;
+  measurements: Measurements;
+  unit: Unit;
+  hasPearlWork: boolean;
 }
 
 export interface OrderData {
@@ -69,6 +90,66 @@ export interface OrderData {
   unit: Unit;
   hasPearlWork: boolean;
   deliveryDetails: DeliveryDetails;
+  customGarmentName?: string;
+  customItems: CustomTailoringItem[];
+}
+
+export enum ProductCategory {
+  MEN = 'Men',
+  WOMEN = 'Women',
+  KIDS = 'Kids',
+  UNISEX = 'Unisex',
+  ACCESSORIES = 'Accessories',
+  BRIDAL = 'Bridal',
+}
+
+export enum PackageType {
+  SEASONAL = 'Seasonal',
+  FESTIVAL = 'Festival',
+  OFFER = 'Special Offer',
+  BUNDLE = 'Bundle',
+}
+
+export interface PackageItem {
+  productId: string;
+  productName?: string;
+  qty: number;
+}
+
+export interface Package {
+  id: string;
+  name: string;
+  slug: string;
+  type: PackageType;
+  tag: string; // e.g. "SUMMER 2026", "EID SPECIAL"
+  description: string;
+  bannerImageUrl: string;
+  badgeLabel?: string; // e.g. "HOT DEAL", "LIMITED TIME"
+  items: PackageItem[];
+  discountPercent?: number;
+  discountFlat?: number;
+  validFrom: string;
+  validTo: string;
+  isActive: boolean;
+  createdAt?: string;
+}
+
+export interface Coupon {
+  id: string;
+  code: string;
+  discountPercent?: number;
+  discountFlat?: number;
+  minOrderValue?: number;
+  maxUses?: number;
+  usedCount?: number;
+  expiresAt: string;
+  isActive: boolean;
+  description?: string;
+}
+
+export interface WishlistItem {
+  productId: string;
+  addedAt: string;
 }
 
 export interface Product {
@@ -77,8 +158,13 @@ export interface Product {
   description: string;
   price: number;
   imageUrl: string;
-  category?: string;
+  category?: string;         // legacy free-text category
+  productCategory?: ProductCategory; // structured gender/type category
+  subCategory?: string;     // e.g. "Frocks", "Shirts", "Blouses"
   stock?: number;
+  barcode?: string;          // Auto-generated SKU e.g. FF-WMN-48291
+  tags?: string[];           // searchable tags
+  sizes?: string[];          // available sizes e.g. ["S","M","L","XL"]
 }
 
 export interface CartItem {
@@ -100,6 +186,13 @@ export enum OrderStatus {
   CANCELLED = 'Cancelled',
 }
 
+export enum PaymentStatus {
+  UNPAID = 'Unpaid',
+  ADVANCE_PAID = 'Advance Paid',
+  FULLY_PAID = 'Fully Paid',
+  COD = 'Cash on Delivery',
+}
+
 export interface StoredFile {
   name: string;
   url: string;
@@ -113,6 +206,9 @@ export interface Order {
   date: string;
   garmentType: GarmentType;
   status: OrderStatus;
+  paymentStatus?: PaymentStatus;
+  internalNotes?: string;
+  invoiceUrl?: string;
   price: number | null;
   orderData: OrderData;
   designFileData?: StoredFile[];

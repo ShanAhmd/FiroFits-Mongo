@@ -1,5 +1,7 @@
 import React from 'react';
 import { type View } from '../types';
+import { type Package } from '../types';
+import { getActivePackages } from '../services/supabaseClient';
 
 // @ts-ignore
 import loyaltyBannerImg from '../uploads/loyalty_banner_models.png';
@@ -15,7 +17,28 @@ interface HomePageProps {
   isLoggedIn: boolean;
 }
 
+const typeGradients: Record<string, string> = {
+  'Seasonal': 'from-orange-500 to-amber-400',
+  'Festival': 'from-purple-600 to-pink-500',
+  'Special Offer': 'from-emerald-600 to-teal-400',
+  'Bundle': 'from-blue-600 to-indigo-500',
+};
+
+const CATEGORIES = [
+  { label: 'Women', icon: '👩', filter: 'Women' },
+  { label: 'Men', icon: '👔', filter: 'Men' },
+  { label: 'Kids', icon: '🧒', filter: 'Kids' },
+  { label: 'Bridal', icon: '💍', filter: 'Bridal' },
+  { label: 'Accessories', icon: '👜', filter: 'Accessories' },
+  { label: 'Tailoring', icon: '✂️', filter: null },
+];
+
 const HomePage: React.FC<HomePageProps> = ({ navigateTo, isLoggedIn }) => {
+  const [activePackages, setActivePackages] = React.useState<Package[]>([]);
+
+  React.useEffect(() => {
+    getActivePackages().then(setActivePackages).catch(() => {});
+  }, []);
   const headings = React.useMemo(() => [
     { primary: "Tailoring", secondary: "Made Simple." },
     { primary: "Perfect Fits", secondary: "Just For You." },
@@ -271,6 +294,88 @@ const HomePage: React.FC<HomePageProps> = ({ navigateTo, isLoggedIn }) => {
               <p className="text-[9px] uppercase tracking-[0.2em] text-brand-dark-gray font-bold mt-1">Hand-Drafted Patterns</p>
             </div>
           </div>
+        </div>
+      </section>
+
+      {/* CATEGORY QUICK-LINKS */}
+      <section className="max-w-6xl mx-auto px-6">
+        <div className="text-center mb-10">
+          <p className="text-[10px] uppercase tracking-[0.3em] font-black text-slate-500 mb-3">Browse By</p>
+          <h2 className="text-4xl font-serif uppercase tracking-tight text-slate-900">Shop Categories</h2>
+        </div>
+        <div className="grid grid-cols-3 md:grid-cols-6 gap-4">
+          {CATEGORIES.map(cat => (
+            <button key={cat.label} onClick={() => navigateTo(cat.filter ? 'products' : 'order')}
+              className="group flex flex-col items-center gap-3 p-5 bg-white border border-slate-200 rounded-2xl hover:border-slate-400 hover:shadow-md transition-all">
+              <span className="text-3xl group-hover:scale-110 transition-transform">{cat.icon}</span>
+              <span className="text-[11px] font-bold uppercase tracking-widest text-slate-700">{cat.label}</span>
+            </button>
+          ))}
+        </div>
+      </section>
+
+      {/* ACTIVE PACKAGE DEALS BANNER */}
+      {activePackages.length > 0 && (
+        <section className="max-w-6xl mx-auto px-6">
+          <div className="flex items-center justify-between mb-8">
+            <div>
+              <p className="text-[10px] uppercase tracking-[0.3em] font-black text-slate-500 mb-2">Limited Time</p>
+              <h2 className="text-4xl font-serif uppercase tracking-tight text-slate-900">Active Deals & Packages</h2>
+            </div>
+            <button onClick={() => navigateTo('products')} className="text-xs font-bold uppercase tracking-widest text-slate-600 hover:text-slate-900 flex items-center gap-1 transition-colors">
+              View All
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M9 5l7 7-7 7"/></svg>
+            </button>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {activePackages.slice(0, 3).map(pkg => {
+              const daysLeft = Math.max(0, Math.ceil((new Date(pkg.validTo).getTime() - Date.now()) / 86400000));
+              const grad = typeGradients[pkg.type] || 'from-slate-700 to-slate-500';
+              return (
+                <button key={pkg.id} onClick={() => navigateTo('products')}
+                  className={`text-left relative rounded-2xl overflow-hidden group cursor-pointer bg-gradient-to-br ${grad} h-52 shadow-lg hover:shadow-xl transition-all hover:-translate-y-1`}>
+                  {pkg.bannerImageUrl && <img src={pkg.bannerImageUrl} alt={pkg.name} className="absolute inset-0 w-full h-full object-cover opacity-30 mix-blend-overlay"/>}
+                  <div className="absolute inset-0 bg-black/20"/>
+                  <div className="relative z-10 p-6 h-full flex flex-col justify-between">
+                    <div>
+                      {pkg.badgeLabel && <span className="inline-block bg-white/20 text-white text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full border border-white/30 mb-2">{pkg.badgeLabel}</span>}
+                      <p className="text-white/70 text-[10px] font-black uppercase tracking-[0.25em]">{pkg.tag}</p>
+                      <h3 className="text-white font-serif text-2xl font-bold leading-tight mt-1">{pkg.name}</h3>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        {pkg.discountPercent && <p className="text-white font-black text-xl">{pkg.discountPercent}% OFF</p>}
+                        <p className="text-white/60 text-xs">{daysLeft} days left</p>
+                      </div>
+                      <div className="bg-white/20 backdrop-blur text-white text-[10px] font-black uppercase tracking-wide px-4 py-2 rounded-xl border border-white/30 group-hover:bg-white/30 transition-colors">
+                        Shop Now →
+                      </div>
+                    </div>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </section>
+      )}
+
+      {/* TRUST BADGES */}
+      <section className="bg-slate-950 text-white">
+        <div className="max-w-6xl mx-auto px-6 py-12 grid grid-cols-2 md:grid-cols-4 gap-8">
+          {[
+            { icon: '🚚', title: 'Free Delivery', subtitle: 'Orders over Rs. 20,000' },
+            { icon: '💵', title: 'COD Available', subtitle: 'Pay on delivery' },
+            { icon: '✂️', title: 'Bespoke Tailoring', subtitle: 'Made to your measurements' },
+            { icon: '🔄', title: 'Easy Returns', subtitle: '7-day hassle-free returns' },
+          ].map(b => (
+            <div key={b.title} className="flex flex-col items-center text-center gap-3">
+              <span className="text-3xl">{b.icon}</span>
+              <div>
+                <p className="text-sm font-black uppercase tracking-wider">{b.title}</p>
+                <p className="text-slate-400 text-xs mt-1">{b.subtitle}</p>
+              </div>
+            </div>
+          ))}
         </div>
       </section>
 

@@ -84,7 +84,7 @@ const MyOrders: React.FC<MyOrdersProps> = ({ userId, navigateTo }) => {
                     )}
                   </div>
                   <h3 className="text-xl font-serif text-black uppercase tracking-wider mt-4">
-                    {order.garmentType}
+                    {order.garmentType} {order.orderData.customItems && order.orderData.customItems.length > 0 && `(${order.orderData.customItems.length} Garments)`}
                   </h3>
                   <p className="text-[10px] text-brand-dark-gray uppercase tracking-widest font-bold mt-1">
                     Ordered on: {new Date(order.createdAt || order.date).toLocaleDateString()}
@@ -103,7 +103,7 @@ const MyOrders: React.FC<MyOrdersProps> = ({ userId, navigateTo }) => {
                 </div>
               </div>
 
-              {/* BRUTALIST STATUS PIPELINE */}
+              {/* TIMESTAMPTED STATUS PIPELINE */}
               <div className="p-8 overflow-x-auto custom-scrollbar">
                 <div className="min-w-[600px] relative">
                   <div className="flex items-center justify-between mb-4 relative z-10">
@@ -128,17 +128,29 @@ const MyOrders: React.FC<MyOrdersProps> = ({ userId, navigateTo }) => {
                     ></div>
                   </div>
 
-                  {/* Labels */}
+                  {/* Labels and Timestamps */}
                   <div className="flex justify-between mt-6">
-                    {statusSteps.map((step, index) => (
-                      <div key={step.status} className="flex-1 text-center px-1">
-                        <span className={`text-[8px] uppercase tracking-[0.1em] font-bold transition-colors ${
-                          index <= currentIndex ? 'text-black' : 'text-gray-400'
-                        }`}>
-                          {step.label}
-                        </span>
-                      </div>
-                    ))}
+                    {statusSteps.map((step, index) => {
+                      const isCompleted = index <= currentIndex;
+                      const baseDate = new Date(order.date);
+                      baseDate.setDate(baseDate.getDate() + (index * 3)); // Mock 3-day progression per step
+                      const timestamp = baseDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                      
+                      return (
+                        <div key={step.status} className="flex-1 text-center px-1">
+                          <span className={`block text-[8px] uppercase tracking-[0.1em] font-bold transition-colors ${
+                            isCompleted ? 'text-black' : 'text-gray-400'
+                          }`}>
+                            {step.label}
+                          </span>
+                          {isCompleted && (
+                            <span className="block text-[8px] font-mono text-gray-500 mt-1">
+                              {timestamp}
+                            </span>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
               </div>
